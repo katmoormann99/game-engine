@@ -1,6 +1,8 @@
 #include "engine/simulation/simulation.hpp"
 #include "engine/rendering/graphics_backend.hpp"
 
+#include "include/engine/factory/entity_factory.hpp"
+
 #include "engine/components/transform.hpp"
 #include "engine/components/velocity.hpp"
 #include "engine/components/lifetime.hpp"
@@ -25,47 +27,10 @@ int main()
 
     engine::Registry& registry = simulation.registry();
 
-    // Sensor entity
-    engine::Entity sensorEntity = registry.create();
+    engine::EntityFactory factory(registry);
 
-    registry.transforms().add(
-        sensorEntity,
-        engine::Transform{
-            cg::Point3(0.0f, 0.0f, 0.0f)
-        }
-    );
-
-    registry.sensors().add(
-        sensorEntity,
-        engine::Sensor{25.0f}
-    );
-
-    // Moving target
-    engine::Entity targetEntity = registry.create();
-
-    registry.transforms().add(
-        targetEntity,
-        engine::Transform{
-            cg::Point3(40.0f, 0.0f, 0.0f)
-        }
-    );
-
-    registry.velocities().add(
-        targetEntity,
-        engine::Velocity{
-            cg::Vector3(-10.0f, 0.0f, 0.0f)
-        }
-    );
-
-    registry.renderables().add(
-        targetEntity,
-        engine::Renderable{1}
-    );
-
-    registry.lifetimes().add(
-        targetEntity,
-        engine::Lifetime{10.0}
-    );
+    engine::Entity sensorEntity = factory.createSensor(cg::Point3(0.0f, 0.0f, 0.0f), 25.0f);
+    engine::Entity targetEntity = factory.createTarget(cg::Point3(40.0f, 0.0f, 0.0f), cg::Vector3(-10.0f, 0.0f, 0.0f), 10.0);
 
     bool running = true;
 

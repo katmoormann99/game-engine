@@ -18,23 +18,25 @@ void RenderSystem::render(const Registry& registry, GraphicsBackend &graphics) c
 {
     const auto& renderables = registry.renderables();
     const auto& transforms = registry.transforms();
+    const auto& materials = registry.materials();
 
     const auto& entities = renderables.entities();
 
     for (Entity entity : entities)
     {
-        if (!transforms.has(entity))
+        if (!transforms.has(entity) || !materials.has(entity))
         {
             continue;
         }
 
         const Renderable& renderable = renderables.get(entity);
-
         const Transform& transform = transforms.get(entity);
+        const Material& material = materials.get(entity);
 
         graphics.drawMesh(
-            renderable.meshId,
-            transform
+            renderables.get(entity).meshId,
+            transforms.get(entity),
+            materials.get(entity)
         );
     }
 }

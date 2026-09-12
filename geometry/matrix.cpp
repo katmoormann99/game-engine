@@ -1,6 +1,6 @@
 #include "geometry/matrix.hpp"
 
-#include "common/logging.hpp"
+// #include "common/logging.hpp"
 #include "geometry/geometry.hpp"
 
 #include <cmath>
@@ -8,8 +8,8 @@
 namespace cg
 {
 
-// Forward declare logging function
-void logmsg(const char *message, ...);
+// // Forward declare logging function
+// void logmsg(const char *message, ...);
 
 Matrix4x4::Matrix4x4() { set_identity(); }
 
@@ -186,21 +186,21 @@ Matrix4x4 &Matrix4x4::operator*=(float s)
     return *this;
 }
 
-HPoint3 Matrix4x4::operator*(const HPoint3 &v) const
-{
-    return HPoint3((a_[0] * v.x + a_[4] * v.y + a_[8] * v.z + a_[12] * v.w),
-                   (a_[1] * v.x + a_[5] * v.y + a_[9] * v.z + a_[13] * v.w),
-                   (a_[2] * v.x + a_[6] * v.y + a_[10] * v.z + a_[14] * v.w),
-                   (a_[3] * v.x + a_[7] * v.y + a_[11] * v.z + a_[15] * v.w));
-}
+// HPoint3 Matrix4x4::operator*(const HPoint3 &v) const
+// {
+//     return HPoint3((a_[0] * v.x + a_[4] * v.y + a_[8] * v.z + a_[12] * v.w),
+//                    (a_[1] * v.x + a_[5] * v.y + a_[9] * v.z + a_[13] * v.w),
+//                    (a_[2] * v.x + a_[6] * v.y + a_[10] * v.z + a_[14] * v.w),
+//                    (a_[3] * v.x + a_[7] * v.y + a_[11] * v.z + a_[15] * v.w));
+// }
 
-HPoint3 Matrix4x4::operator*(const Point3 &v) const
-{
-    return HPoint3((a_[0] * v.x + a_[4] * v.y + a_[8] * v.z + a_[12]),
-                   (a_[1] * v.x + a_[5] * v.y + a_[9] * v.z + a_[13]),
-                   (a_[2] * v.x + a_[6] * v.y + a_[10] * v.z + a_[14]),
-                   (a_[3] * v.x + a_[7] * v.y + a_[11] * v.z + a_[15]));
-}
+// HPoint3 Matrix4x4::operator*(const Point3 &v) const
+// {
+//     return HPoint3((a_[0] * v.x + a_[4] * v.y + a_[8] * v.z + a_[12]),
+//                    (a_[1] * v.x + a_[5] * v.y + a_[9] * v.z + a_[13]),
+//                    (a_[2] * v.x + a_[6] * v.y + a_[10] * v.z + a_[14]),
+//                    (a_[3] * v.x + a_[7] * v.y + a_[11] * v.z + a_[15]));
+// }
 
 Vector3 Matrix4x4::operator*(const Vector3 &v) const
 {
@@ -209,7 +209,7 @@ Vector3 Matrix4x4::operator*(const Vector3 &v) const
                    (a_[2] * v.x + a_[6] * v.y + a_[10] * v.z));
 }
 
-Ray3 Matrix4x4::operator*(const Ray3 &ray) const { return Ray3(*this * ray.o, *this * ray.d); }
+// Ray3 Matrix4x4::operator*(const Ray3 &ray) const { return Ray3(*this * ray.o, *this * ray.d); }
 
 Matrix4x4 &Matrix4x4::transpose()
 {
@@ -399,7 +399,7 @@ Matrix4x4 Matrix4x4::get_inverse() const
         // to the identity matrix.
         if(v1 == 0.0f)
         {
-            log_msg("InvertMatrix: Singular matrix");
+            // log_msg("InvertMatrix: Singular matrix");
             b.set_identity();
             return b;
         }
@@ -426,13 +426,13 @@ Matrix4x4 Matrix4x4::get_inverse() const
     return b;
 }
 
-void Matrix4x4::log(const char *str) const
-{
-    log_msg("  %s", str);
-    log_msg("%.3f %.3f %.3f %.3f", m00(), m01(), m02(), m03());
-    log_msg("%.3f %.3f %.3f %.3f", m10(), m11(), m12(), m13());
-    log_msg("%.3f %.3f %.3f %.3f", m20(), m21(), m22(), m23());
-    log_msg("%.3f %.3f %.3f %.3f", m30(), m31(), m32(), m33());
-}
+// void Matrix4x4::log(const char *str) const
+// {
+//     log_msg("  %s", str);
+//     log_msg("%.3f %.3f %.3f %.3f", m00(), m01(), m02(), m03());
+//     log_msg("%.3f %.3f %.3f %.3f", m10(), m11(), m12(), m13());
+//     log_msg("%.3f %.3f %.3f %.3f", m20(), m21(), m22(), m23());
+//     log_msg("%.3f %.3f %.3f %.3f", m30(), m31(), m32(), m33());
+// }
 
 } // namespace cg

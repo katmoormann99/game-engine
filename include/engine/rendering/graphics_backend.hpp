@@ -1,14 +1,17 @@
 //============================================================================
 // Author: Kat Moormann
 // File: graphics_backend.hpp
-// Purpose: Defines the graphics backend interface responsible for window
-//          management, frame setup, and submitting mesh draw calls to OpenGL.
-// Date: June 24 2025
+// Purpose: Owns the SDL/OpenGL rendering backend, GPU mesh resources,
+//          shader program, and submission of ECS renderable entities.
+// Date: June 28 2025
 //============================================================================
 
 #pragma once
 
 #include "engine/components/transform.hpp"
+#include "engine/components/material.hpp"
+#include "engine/rendering/mesh.hpp"
+#include "geometry/matrix.hpp"
 
 #include <cstdint>
 
@@ -28,23 +31,29 @@ public:
 
     void drawMesh(
         std::uint32_t meshId,
-        const Transform& transform
+        const Transform& transform,
+        const Material& material
     );
 
     void endFrame();
     void shutdown();
 
 private:
-    // Create the first test triangle and upload it to the GPU.
-    bool createTestMesh();
 
-    // Create the minimal shader program used to draw the test mesh.
+    // Creates reusable square geometry for floors, walls, and ceilings.
+    bool createUnitSquareMesh();
+
+    // Loads, compiles, and links the vertex/fragment shader program.
     bool createShaderProgram();
 
-    // OpenGL object IDs.
-    std::uint32_t vao_ = 0;
-    std::uint32_t vbo_ = 0;
+    // Shared GPU geometry.
+    GPUMesh unitSquareMesh_;
+
+    // Linked OpenGL shader program.
     std::uint32_t shaderProgram_ = 0;
+
+    cg::Matrix4x4 view_;
+    cg::Matrix4x4 projection_;
 };
 
 } // namespace engine

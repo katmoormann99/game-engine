@@ -12,9 +12,9 @@
 #ifndef __GEOMETRY_MATRIX_HPP__
 #define __GEOMETRY_MATRIX_HPP__
 
-#include "hpoint3.hpp"
+// #include "hpoint3.hpp"
 #include "point3.hpp"
-#include "ray3.hpp"
+// #include "ray3.hpp"
 #include "vector3.hpp"
 
 #include <array>
@@ -148,20 +148,20 @@ class Matrix4x4
      */
     Matrix4x4 &operator*=(float s);
 
-    /**
-     * Transforms a coordinate by the matrix.
-     * @param   v  Homogeneous point.
-     * @return  Returns the transformed homogeneous coordinate position.
-     */
-    HPoint3 operator*(const HPoint3 &v) const;
+    // /**
+    //  * Transforms a coordinate by the matrix.
+    //  * @param   v  Homogeneous point.
+    //  * @return  Returns the transformed homogeneous coordinate position.
+    //  */
+    // HPoint3 operator*(const HPoint3 &v) const;
 
-    /**
-     * Transforms a coordinate by the matrix.  Returns a homogeneous
-     * coordinate position.  Assumes the w coordinate is 1.
-     * @param   v  3D point to transform.
-     * @return  Returns the transformed point.
-     */
-    HPoint3 operator*(const Point3 &v) const;
+    // /**
+    //  * Transforms a coordinate by the matrix.  Returns a homogeneous
+    //  * coordinate position.  Assumes the w coordinate is 1.
+    //  * @param   v  3D point to transform.
+    //  * @return  Returns the transformed point.
+    //  */
+    // HPoint3 operator*(const Point3 &v) const;
 
     /**
      * Transforms a vector (normal or direction) by the matrix.
@@ -171,13 +171,13 @@ class Matrix4x4
      */
     Vector3 operator*(const Vector3 &v) const;
 
-    /**
-     * Transforms a ray by the matrix.  Transforms the ray origin and
-     * ray direction.
-     * @param   ray   Ray to transform
-     * @return  Returns the transformed ray.
-     */
-    Ray3 operator*(const Ray3 &ray) const;
+    // /**
+    //  * Transforms a ray by the matrix.  Transforms the ray origin and
+    //  * ray direction.
+    //  * @param   ray   Ray to transform
+    //  * @return  Returns the transformed ray.
+    //  */
+    // Ray3 operator*(const Ray3 &ray) const;
 
     /**
      * Transposes the current matrix.

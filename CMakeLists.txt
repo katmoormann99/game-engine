@@ -27,9 +27,14 @@ add_executable(game_engine
     src/spatial/spatial_grid.cpp
     src/simulation/simulation.cpp
     src/rendering/graphics_backend.cpp
+    src/rendering/obj_loader.cpp
+
+    src/factory/entity_factory.cpp
 
     geometry/vector3.cpp
     geometry/point3.cpp
+    geometry/matrix.cpp
+    geometry/geometry.cpp
 )
 
 target_include_directories(game_engine
@@ -43,4 +48,9 @@ target_link_libraries(game_engine
     PRIVATE
         /opt/homebrew/lib/libSDL3.dylib
         "-framework OpenGL"
+)
+
+file (COPY
+    ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
 )
