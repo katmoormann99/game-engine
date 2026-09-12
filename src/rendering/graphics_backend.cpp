@@ -376,8 +376,8 @@ namespace engine
         GLint colorLocation = glGetUniformLocation(shaderProgram_, "uColor");
 
         glUniformMatrix4fv(modelLocation, 1, GL_FALSE, model.get());
-        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, model.get());
-        glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, model.get());
+        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, view_.get());
+        glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projection_.get());
 
         glUniform4f(colorLocation,material.r, material.g, material.b, material.a);
         glBindVertexArray(unitSquareMesh_.vao);

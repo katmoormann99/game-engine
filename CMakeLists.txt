@@ -23,6 +23,7 @@ add_executable(game_engine
     src/systems/lifetime_system.cpp
     src/systems/sensor_system.cpp
     src/systems/render_system.cpp
+    src/systems/collision_system.cpp
 
     src/spatial/spatial_grid.cpp
     src/simulation/simulation.cpp

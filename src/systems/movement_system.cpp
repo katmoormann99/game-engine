@@ -15,6 +15,7 @@ namespace engine{
     {
         auto &transforms = registry.transforms();
         auto &velocities = registry.velocities();
+        auto &colliders = registry.sphereColliders();
 
         const auto &entities = velocities.entities();
 
@@ -22,6 +23,12 @@ namespace engine{
         for (std::size_t i = 0; i < entities.size(); i++)
         {
             Entity entity = entities[i];
+
+            if (colliders.has(entity)){
+                // The CollisionSystem also moves collidable entites
+                // if both the movementSystem and CollisionSystem move the entity the entity would move twice = not wanted behavior 
+                continue;
+            }
 
             if (!transforms.has(entity))
             {

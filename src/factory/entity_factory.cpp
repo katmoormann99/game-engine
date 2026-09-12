@@ -14,6 +14,7 @@
 #include "engine/components/transform.hpp"
 #include "engine/components/velocity.hpp"
 #include "engine/components/material.hpp"
+#include "engine/components/sphere_collider.hpp"
 
 namespace engine 
 {
@@ -38,6 +39,32 @@ namespace engine
         registry_.renderables().add(entity, Renderable{1});
         registry_.lifetimes().add(entity, Lifetime{lifetime});
         registry_.materials().add(entity, Material{1.0f, 0.3f, 0.2f, 1.0f});
+        registry_.sphereColliders().add(entity, SphereCollider{2.0f});
+
+        return entity;
+    }
+
+    Entity EntityFactory::createStaticSurface(const cg::Point3& position, const cg::Vector3& rotation, const cg::Vector3& scale, const Material& material)
+    {
+        Entity entity = registry_.create();
+        
+        registry_.transforms().add(entity,
+            Transform{
+                position,
+                rotation,
+                scale
+            }
+        );
+
+        registry_.renderables().add(
+            entity,
+            Renderable{1}
+        );
+
+        registry_.materials().add(
+            entity,
+            material
+        );
 
         return entity;
     }

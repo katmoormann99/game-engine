@@ -12,6 +12,7 @@
 #include "engine/systems/movement_system.hpp"
 #include "engine/systems/lifetime_system.hpp"
 #include "engine/systems/sensor_system.hpp"
+#include "engine/systems/collision_system.hpp"
 
 namespace engine
 {
@@ -39,6 +40,7 @@ private:
     MovementSystem movementSystem_;
     LifetimeSystem lifetimeSystem_;
     SensorSystem sensorSystem_;
+    CollisionSystem collisionSystem_;
 
     double accumulator_ = 0.0;
 };

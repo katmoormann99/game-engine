@@ -16,6 +16,7 @@
 #include "../components/sensor.hpp"
 #include "../components/renderable.hpp"
 #include "../components/material.hpp"
+#include "../components/sphere_collider.hpp"
 
 namespace engine
 {
@@ -34,6 +35,7 @@ public:
         sensors_.remove(entity);
         renderables_.remove(entity);
         materials_.remove(entity);
+        sphereColliders_.remove(entity);
     }
 
     ComponentStorage<Transform>& transforms() {return transforms_;}
@@ -51,6 +53,9 @@ public:
     ComponentStorage<Material>& materials() {return materials_;}
     const ComponentStorage<Material>& materials() const {return materials_;};
 
+    ComponentStorage<SphereCollider>& sphereColliders() {return sphereColliders_;}
+    const ComponentStorage<SphereCollider>& sphereColliders() const {return sphereColliders_;}
+
 private:
 
     Entity nextEntity_ = 1;
@@ -61,6 +66,7 @@ private:
     ComponentStorage<Sensor> sensors_;
     ComponentStorage<Renderable> renderables_;
     ComponentStorage<Material> materials_;
+    ComponentStorage<SphereCollider> sphereColliders_;
 };
 
 }

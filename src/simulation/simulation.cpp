@@ -58,19 +58,12 @@ namespace engine
 
     void Simulation::step()
     {
-        movementSystem_.update(
-            registry_, 
-            time_.fixed_dt
-        );
+        const float dt = static_cast<float>(time_.fixed_dt);
 
-        lifetimeSystem_.update(
-            registry_,
-            time_.fixed_dt
-        );
-
-        sensorSystem_.update(
-            registry_
-        );
+        movementSystem_.update(registry_, dt);
+        collisionSystem_.update(registry_, dt);
+        sensorSystem_.update(registry_);
+        lifetimeSystem_.update(registry_, dt);
 
         time_.advance();
     }
