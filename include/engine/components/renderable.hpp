@@ -12,11 +12,17 @@
 
 namespace engine
 {
+    enum class MeshId : std::uint32_t
+    {
+        UnitSquare = 1,
+        Target = 2,
+        Sensor = 3
+    };
 
-struct Renderable
-{
-    std::uint32_t meshId = 0;
-};
+    struct Renderable
+    {
+        MeshId meshId = MeshId::UnitSquare;
+    };
 
 }
 

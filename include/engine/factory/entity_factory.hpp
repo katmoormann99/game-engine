@@ -60,6 +60,8 @@
 
             Entity createCamera(const cg::Point3& position, const cg::Vector3& rotation, float fovDegrees, float aspectRatio, float nearPlane, float farPlane);
 
+            Entity createLight(const cg::Point3& position, const cg::Vector3& color, float intensity, float innerCutoffDegrees, float outerCutoffDegrees);
+
         private:
             Registry &registry_;
     };

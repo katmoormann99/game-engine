@@ -16,10 +16,31 @@ namespace engine
 
 void RenderSystem::render(const Registry& registry, GraphicsBackend &graphics) const
 {
-    const auto& cameras = registry.cameras();
+    
     const auto& transforms = registry.transforms();
 
-    // Go through every entites that has a Camera component 
+    // Go through every entity that has a Light component 
+    const auto& lights = registry.lights();
+    for (Entity lightEntity : lights.entities())
+    {
+        // If this light entity does NOT have a Transform SKIP IT
+        // Transform is necessary data for the placement of the light 
+        if (!transforms.has(lightEntity)){
+            continue;
+        }
+        
+        const Light& light = lights.get(lightEntity);
+
+        if (!light.active)
+        {
+            continue;
+        }
+        graphics.setLight(transforms.get(lightEntity), light);
+        break;
+    }
+
+    // Go through every entity that has a Camera component 
+    const auto& cameras = registry.cameras();
     for (Entity cameraEntity : cameras.entities())
     {
         if (!transforms.has(cameraEntity)){

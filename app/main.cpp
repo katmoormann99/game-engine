@@ -44,8 +44,10 @@ int main()
     engine::Entity right_wall = factory.createStaticSurface(cg::Point3(50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, -90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.28f, 0.22f, 0.34f, 1.0f});
     // engine::Entity front_wall = factory.createStaticSurface(cg::Point3(0.0f, -50.0f, 50.0f),cg::Vector3(-90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.7f, 0.7f, 0.7f, 1.0f});
 
-    engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(0.0f, 0.0f, 0.0f), 70.0f, 1.0f, 1.0f, 200.0f);
+    engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 70.0f, 1.0f, 1.0f, 200.0f);
     
+    engine::Entity light = factory.createLight(cg::Point3(0.0f, -100.0f, 50.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);
+
     bool running = true;
 
     auto previousTime = std::chrono::steady_clock::now();

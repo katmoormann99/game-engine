@@ -12,11 +12,9 @@ if(APPLE)
     add_definitions(-DGL_SILENCE_DEPRECATION)
 endif()
 
-set(GRAPHICS_SANDBOX
-    ${CMAKE_CURRENT_SOURCE_DIR}/../graphics-sandbox
-)
+add_executable(
+    game_engine
 
-add_executable(game_engine
     app/main.cpp
 
     src/systems/movement_system.cpp
@@ -26,7 +24,9 @@ add_executable(game_engine
     src/systems/collision_system.cpp
 
     src/spatial/spatial_grid.cpp
+
     src/simulation/simulation.cpp
+
     src/rendering/graphics_backend.cpp
     src/rendering/obj_loader.cpp
 
@@ -38,20 +38,66 @@ add_executable(game_engine
     geometry/geometry.cpp
 )
 
-target_include_directories(game_engine
+target_include_directories(
+    game_engine
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${GRAPHICS_SANDBOX}/include
+
+        # Homebrew SDL3 headers:
+        /opt/homebrew/include
 )
 
-target_link_libraries(game_engine
+target_link_libraries(
+    game_engine
     PRIVATE
         /opt/homebrew/lib/libSDL3.dylib
         "-framework OpenGL"
 )
 
-file (COPY
+set(SHADER_SOURCE_DIR
     ${CMAKE_CURRENT_SOURCE_DIR}/shaders
-    DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+set(SHADER_BINARY_DIR
+    ${CMAKE_CURRENT_BINARY_DIR}/shaders
+)
+
+add_custom_command(
+    OUTPUT
+        ${SHADER_BINARY_DIR}/basic.vert
+        ${SHADER_BINARY_DIR}/basic.frag
+
+    COMMAND
+        ${CMAKE_COMMAND} -E make_directory
+        ${SHADER_BINARY_DIR}
+
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        ${SHADER_SOURCE_DIR}/basic.vert
+        ${SHADER_BINARY_DIR}/basic.vert
+
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        ${SHADER_SOURCE_DIR}/basic.frag
+        ${SHADER_BINARY_DIR}/basic.frag
+
+    DEPENDS
+        ${SHADER_SOURCE_DIR}/basic.vert
+        ${SHADER_SOURCE_DIR}/basic.frag
+
+    COMMENT "Updating shaders"
+)
+
+add_custom_target(
+    copy_shaders ALL
+    DEPENDS
+        ${SHADER_BINARY_DIR}/basic.vert
+        ${SHADER_BINARY_DIR}/basic.frag
+)
+
+add_dependencies(
+    game_engine
+    copy_shaders
 )

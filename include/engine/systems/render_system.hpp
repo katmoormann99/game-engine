@@ -14,14 +14,10 @@ namespace engine
 {
 
 class GraphicsBackend;
-
 class RenderSystem
 {
 public:
-    void render(
-        const Registry& registry,
-        GraphicsBackend& graphics
-    ) const;
+    void render(const Registry& registry, GraphicsBackend& graphics) const;
 };
 
 } // namespace engine
