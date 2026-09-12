@@ -11,12 +11,16 @@
 #include "engine/components/sphere_collider.hpp"
 #include "engine/components/transform.hpp"
 #include "engine/components/velocity.hpp"
+#include "engine/components/projectile.hpp"
+
 
 #include "geometry/vector3.hpp"
 
 #include <array>
 #include <cmath>
 #include <unordered_map>
+#include <vector>
+#include <algorithm>
 
 namespace engine
 {
@@ -60,28 +64,31 @@ const std::array<CollisionPlane, 6> ROOM_PLANES =
 struct PendingSphereCollision
 {
     bool hasCollision = false;
-
     float time = 0.0f;
+    cg::Vector3 normal{0.0f, 0.0f, 0.0f};
 
-    cg::Vector3 normal{
-        0.0f,
-        0.0f,
-        0.0f
-    };
+    // The other entity involved in this sphere-sphere collision
+    Entity otherEntity = 0;
 };
 
 
 // Keep only the EARLIEST sphere collision for an entity.
-void scheduleSphereCollision(std::unordered_map<Entity, PendingSphereCollision>& pending, Entity entity, float time, const cg::Vector3& normal)
+void scheduleSphereCollision(
+    std::unordered_map<Entity, PendingSphereCollision>& pending, 
+    Entity entity, 
+    Entity otherEntity,
+    float time, 
+    const cg::Vector3& normal
+)
 {
     PendingSphereCollision& collision = pending[entity];
 
-    if (!collision.hasCollision ||
-        time < collision.time)
+    if (!collision.hasCollision || time < collision.time)
     {
         collision.hasCollision = true;
         collision.time = time;
         collision.normal = normal;
+        collision.otherEntity = otherEntity;
     }
 }
 
@@ -185,146 +192,110 @@ bool sphereSphereTimeOfImpact(
 } // anonymous namespace
 
 
-void CollisionSystem::update(
-    Registry& registry,
-    float dt
-)
+void CollisionSystem::update(Registry& registry, float dt)
 {
     constexpr float EPS_T = 1e-5f;
     constexpr float NUDGE = 1e-3f;
     constexpr float EPS2 = 1e-6f;
 
-    auto& transforms =
-        registry.transforms();
+    // transforms → actual Transform storage in Registry
+    // velocities → actual Velocity storage in Registry
+    // colliders  → actual SphereCollider storage in Registry
+    auto& transforms = registry.transforms();
+    auto& velocities = registry.velocities();
+    auto& colliders = registry.sphereColliders();
 
-    auto& velocities =
-        registry.velocities();
 
-    auto& colliders =
-        registry.sphereColliders();
+    // give me a reference to the entity ID list inside the collider storage, but I promise not to modify that list
+    // so entities might essentially refer to: [3, 7, 12]
+    const auto& entities = colliders.entities();
 
-    const auto& entities =
-        colliders.entities();
+    // Entities cannot be safely destroyed while we are iterating through ComponentStorage
+    // So collision responses queue destruction UNTILL all collision process for this timestep has finished
+    std::vector<Entity> entitiesToDestroy;
+    
+    auto queueDestroy = [&entitiesToDestroy](Entity entity)
+    {
+        if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), entity) == entitiesToDestroy.end())
+        {
+            entitiesToDestroy.push_back(entity);
+        }
+    };
 
+    auto isQueuedForDestroy = [&entitiesToDestroy](Entity entity)
+    {
+        return std::find(
+            entitiesToDestroy.begin(),
+            entitiesToDestroy.end(),
+            entity
+        ) != entitiesToDestroy.end();
+    };
 
     // PHASE 1: Find sphere-sphere collision events for this fixed timestep.
-    std::unordered_map<
-        Entity,
-        PendingSphereCollision
-    > pendingSphereCollisions;
+    std::unordered_map<Entity, PendingSphereCollision> pendingSphereCollisions;
 
 
-    for (std::size_t i = 0;
-         i < entities.size();
-         ++i)
+    for (std::size_t i = 0; i < entities.size(); ++i)
     {
-        Entity entityA =
-            entities[i];
-
-        if (!transforms.has(entityA) ||
-            !velocities.has(entityA))
+        Entity entityA = entities[i];
+        if (!transforms.has(entityA) || !velocities.has(entityA))
         {
             continue;
         }
 
 
-        for (std::size_t j = i + 1;
-             j < entities.size();
-             ++j)
+        for (std::size_t j = i + 1; j < entities.size(); ++j)
         {
-            Entity entityB =
-                entities[j];
-
-            if (!transforms.has(entityB) ||
-                !velocities.has(entityB))
+            Entity entityB = entities[j];
+            if (!transforms.has(entityB) || !velocities.has(entityB))
             {
                 continue;
             }
 
 
-            Transform& transformA =
-                transforms.get(entityA);
+            Transform& transformA = transforms.get(entityA);
+            Transform& transformB = transforms.get(entityB);
 
-            Transform& transformB =
-                transforms.get(entityB);
+            Velocity& velocityA = velocities.get(entityA);
+            Velocity& velocityB = velocities.get(entityB);
 
-            Velocity& velocityA =
-                velocities.get(entityA);
-
-            Velocity& velocityB =
-                velocities.get(entityB);
-
-            const SphereCollider& colliderA =
-                colliders.get(entityA);
-
-            const SphereCollider& colliderB =
-                colliders.get(entityB);
+            const SphereCollider& colliderA = colliders.get(entityA);
+            const SphereCollider& colliderB = colliders.get(entityB);
 
 
-            // ----------------------------------------------------
             // Start-of-step overlap correction.
             //
             // If two spheres are already overlapping, separate
             // them slightly and reflect their directions.
-            // ----------------------------------------------------
 
-            cg::Vector3 AB(
-                transformA.position,
-                transformB.position
-            );
+            cg::Vector3 AB(transformA.position, transformB.position);
 
-            const float minimumDistance =
-                colliderA.radius +
-                colliderB.radius;
-
-            const float distanceSquared =
-                AB.norm_squared();
+            const float minimumDistance = colliderA.radius + colliderB.radius;
+            const float distanceSquared = AB.norm_squared();
 
 
-            if (distanceSquared <
-                minimumDistance * minimumDistance)
+            if (distanceSquared < minimumDistance * minimumDistance)
             {
                 if (distanceSquared > EPS2)
                 {
                     cg::Vector3 normal = AB;
                     normal.normalize();
 
-                    velocityA.linear =
-                        velocityA.linear
-                            .reflect(normal);
+                    velocityA.linear = velocityA.linear.reflect(normal);
+                    velocityB.linear = velocityB.linear.reflect(normal * -1.0f);
 
-                    velocityB.linear =
-                        velocityB.linear
-                            .reflect(
-                                normal * -1.0f
-                            );
+                    // Small separation so they do not remain overlapping.
+                    transformA.position = cg::Point3(
+                        transformA.position.x - normal.x * NUDGE,
+                        transformA.position.y - normal.y * NUDGE,
+                        transformA.position.z - normal.z * NUDGE
+                    );
 
-
-                    // Small separation so they do not remain
-                    // overlapping.
-                    transformA.position =
-                        cg::Point3(
-                            transformA.position.x -
-                                normal.x * NUDGE,
-
-                            transformA.position.y -
-                                normal.y * NUDGE,
-
-                            transformA.position.z -
-                                normal.z * NUDGE
-                        );
-
-                    transformB.position =
-                        cg::Point3(
-                            transformB.position.x +
-                                normal.x * NUDGE,
-
-                            transformB.position.y +
-                                normal.y * NUDGE,
-
-                            transformB.position.z +
-                                normal.z * NUDGE
-                        );
+                    transformB.position = cg::Point3(
+                        transformB.position.x + normal.x * NUDGE,
+                        transformB.position.y + normal.y * NUDGE,
+                        transformB.position.z + normal.z * NUDGE
+                    );
                 }
 
                 continue;
@@ -392,19 +363,8 @@ void CollisionSystem::update(
 
             // A reflects around +normal.
             // B reflects around -normal.
-            scheduleSphereCollision(
-                pendingSphereCollisions,
-                entityA,
-                hitTime,
-                normalBtoA
-            );
-
-            scheduleSphereCollision(
-                pendingSphereCollisions,
-                entityB,
-                hitTime,
-                normalBtoA * -1.0f
-            );
+            scheduleSphereCollision(pendingSphereCollisions, entityA, entityB, hitTime, normalBtoA);
+            scheduleSphereCollision(pendingSphereCollisions, entityB, entityA, hitTime, normalBtoA * -1.0f);
         }
     }
 
@@ -421,99 +381,59 @@ void CollisionSystem::update(
 
     for (Entity entity : entities)
     {
-        if (!transforms.has(entity) ||
-            !velocities.has(entity))
+        if (isQueuedForDestroy(entity))
         {
             continue;
         }
 
-
-        Transform& transform =
-            transforms.get(entity);
-
-        Velocity& velocity =
-            velocities.get(entity);
-
-        const SphereCollider& collider =
-            colliders.get(entity);
-
-
-        float remainingTime =
-            dt;
-
-
-        for (int iteration = 0;
-             iteration < 2 &&
-             remainingTime > 0.0f;
-             ++iteration)
+        if (!transforms.has(entity) || !velocities.has(entity))
         {
-            const cg::Vector3 v =
-                velocity.linear;
+            continue;
+        }
 
+        Transform& transform = transforms.get(entity);
+        Velocity& velocity = velocities.get(entity);
+        const SphereCollider& collider = colliders.get(entity);
+        float remainingTime = dt;
 
-            float bestTime =
-                remainingTime + 1.0f;
+        for (int iteration = 0; iteration < 2 && remainingTime > 0.0f; ++iteration)
+        {
+            const cg::Vector3 v = velocity.linear;
+            float bestTime = remainingTime + 1.0f;
 
-            cg::Vector3 bestNormal(
-                0.0f,
-                0.0f,
-                0.0f
-            );
+            cg::Vector3 bestNormal(0.0f, 0.0f, 0.0f);
 
+            enum class CollisionKind{None, Sphere, Plane};
 
-            enum class CollisionKind
-            {
-                None,
-                Sphere,
-                Plane
-            };
-
-
-            CollisionKind bestKind =
-                CollisionKind::None;
+            CollisionKind bestKind = CollisionKind::None;
+            Entity bestOtherEntity = 0;
 
             // Check scheduled sphere collision.
-            auto pendingIt =
-                pendingSphereCollisions.find(entity);
+            auto pendingIt = pendingSphereCollisions.find(entity);
 
-            if (pendingIt !=
-                pendingSphereCollisions.end())
+            if (pendingIt != pendingSphereCollisions.end())
             {
-                const PendingSphereCollision& pending =
-                    pendingIt->second;
+                const PendingSphereCollision& pending = pendingIt->second;
 
-                if (pending.hasCollision &&
-                    pending.time > EPS_T &&
-                    pending.time <= remainingTime)
+                if (pending.hasCollision && pending.time > EPS_T && pending.time <= remainingTime)
                 {
-                    bestTime =
-                        pending.time;
-
-                    bestNormal =
-                        pending.normal;
-
-                    bestKind =
-                        CollisionKind::Sphere;
+                    bestTime = pending.time;
+                    bestNormal = pending.normal;
+                    bestOtherEntity = pending.otherEntity;
+                    bestKind = CollisionKind::Sphere;
                 }
             }
 
             // Find earliest room-plane collision.
-            for (const CollisionPlane& plane :
-                 ROOM_PLANES)
+            for (const CollisionPlane& plane :  ROOM_PLANES)
             {
-                const float centerDistance =
-                    plane.normal.x *
-                        transform.position.x +
-                    plane.normal.y *
-                        transform.position.y +
-                    plane.normal.z *
-                        transform.position.z +
+                const float centerDistance = 
+                    plane.normal.x * transform.position.x +
+                    plane.normal.y * transform.position.y +
+                    plane.normal.z * transform.position.z +
                     plane.d;
 
-
-                const float approachRate =
-                    plane.normal.dot(v);
-
+                const float approachRate = plane.normal.dot(v);
 
                 // Moving away from or parallel to wall.
                 if (approachRate >= 0.0f)
@@ -521,80 +441,75 @@ void CollisionSystem::update(
                     continue;
                 }
 
+                const float hitTime = (collider.radius - centerDistance) / approachRate;
 
-                const float hitTime =
-                    (collider.radius -
-                     centerDistance) /
-                    approachRate;
-
-
-                if (hitTime > EPS_T &&
-                    hitTime <= remainingTime &&
-                    hitTime < bestTime)
+                if (hitTime > EPS_T && hitTime <= remainingTime && hitTime < bestTime)
                 {
-                    bestTime =
-                        hitTime;
-
-                    bestNormal =
-                        plane.normal;
-
-                    bestKind =
-                        CollisionKind::Plane;
+                    bestTime = hitTime;
+                    bestNormal = plane.normal;
+                    bestKind = CollisionKind::Plane;
                 }
             }
 
-
             // We found an event!!
-            if (bestKind !=
-                CollisionKind::None)
+            if (bestKind != CollisionKind::None)
             {
                 // Move exactly to impact.
-                transform.position =
-                    cg::Point3(
-                        transform.position.x +
-                            v.x * bestTime,
-
-                        transform.position.y +
-                            v.y * bestTime,
-
-                        transform.position.z +
-                            v.z * bestTime
+                transform.position = cg::Point3(
+                        transform.position.x + v.x * bestTime,
+                        transform.position.y + v.y * bestTime,
+                        transform.position.z + v.z * bestTime
                     );
 
+                remainingTime -= bestTime;
 
-                remainingTime -=
-                    bestTime;
-
-
-                // Reflect velocity around contact normal.
-                velocity.linear =
-                    velocity.linear.reflect(
-                        bestNormal
-                    );
-
-
-                // Nudge away from contact surface.
-                transform.position =
-                    cg::Point3(
-                        transform.position.x +
-                            bestNormal.x * NUDGE,
-
-                        transform.position.y +
-                            bestNormal.y * NUDGE,
-
-                        transform.position.z +
-                            bestNormal.z * NUDGE
-                    );
-
-
-                // A scheduled sphere collision should only
-                // happen once during this step.
-                if (bestKind ==
-                    CollisionKind::Sphere)
+                // Projectile VS wall 
+                // Projectiles should just dissapear when they hit a room wall instead of 
+                // being reflected like the moving targets!
+                // If the collision we found is with a plane AND this entity is a projectile, then do the following
+                // Does projectiles_ contain Entity 5?
+                // If YES -> Then entity 5 is a projectile!
+                if (bestKind == CollisionKind::Plane && registry.projectiles().has(entity))
                 {
-                    pendingSphereCollisions.erase(
-                        entity
-                    );
+                    queueDestroy(entity);
+
+                    // stop processing the movement of this particle 
+                    remainingTime = 0.0f;
+                    break;
+                }
+
+                // A scheduled sphere collision should only happen once during this step 
+                if (bestKind == CollisionKind::Sphere && registry.projectiles().has(entity))
+                {
+                    queueDestroy(entity);
+
+                    if(bestOtherEntity != 0)
+                    {
+                        queueDestroy(bestOtherEntity);
+                    }
+
+                    // stop processing the movement of this particle 
+                    remainingTime = 0.0f;
+
+                    // This collision has been handled 
+                    pendingSphereCollisions.erase(entity);
+                    
+                    break;
+                }
+
+                // Normal collision response for targets
+                velocity.linear = velocity.linear.reflect(bestNormal);
+
+                // Nudge away from contact surface 
+                transform.position = cg::Point3(
+                    transform.position.x + bestNormal.x * NUDGE,
+                    transform.position.y + bestNormal.y * NUDGE,
+                    transform.position.z + bestNormal.z * NUDGE
+                );
+
+                if (bestKind == CollisionKind::Sphere)
+                {
+                    pendingSphereCollisions.erase(entity);
                 }
             }
             else
@@ -602,19 +517,20 @@ void CollisionSystem::update(
                 // No collision. Advance normally.
                 transform.position =
                     cg::Point3(
-                        transform.position.x +
-                            v.x * remainingTime,
-
-                        transform.position.y +
-                            v.y * remainingTime,
-
-                        transform.position.z +
-                            v.z * remainingTime
+                        transform.position.x + v.x * remainingTime,
+                        transform.position.y + v.y * remainingTime,
+                        transform.position.z + v.z * remainingTime
                     );
 
                 remainingTime = 0.0f;
             }
         }
+    }
+    // DEFFERRED ENTITY DESTRUCTION
+    // Collision processing is NOW finished, so it is safe to modifiy the component storages
+    for (Entity entity : entitiesToDestroy)
+    {
+        registry.destroy(entity);
     }
 }
 

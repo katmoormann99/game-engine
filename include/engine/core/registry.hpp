@@ -79,6 +79,8 @@ public:
 private:
     Entity nextEntity_ = 1;
 
+    // "Create a component storage whose component type is Transform, and name that storage transforms_"
+    // Component storage is a class templaet. Transform tells the template what kind of component this particular storage holds
     ComponentStorage<Transform> transforms_;
     ComponentStorage<Velocity> velocities_;
     ComponentStorage<Lifetime> lifetimes_;
