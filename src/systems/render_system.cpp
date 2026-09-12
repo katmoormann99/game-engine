@@ -16,8 +16,27 @@ namespace engine
 
 void RenderSystem::render(const Registry& registry, GraphicsBackend &graphics) const
 {
-    const auto& renderables = registry.renderables();
+    const auto& cameras = registry.cameras();
     const auto& transforms = registry.transforms();
+
+    // Go through every entites that has a Camera component 
+    for (Entity cameraEntity : cameras.entities())
+    {
+        if (!transforms.has(cameraEntity)){
+            continue;
+        }
+        // If this camera entity does NOT have a Transform SKIP IT
+        // Transform is necessary data for the placement of the camera 
+        const Camera& camera = cameras.get(cameraEntity);
+
+        if (!camera.active)
+        {
+            continue;
+        }
+        graphics.setCamera(transforms.get(cameraEntity), camera);
+    }
+
+    const auto& renderables = registry.renderables();
     const auto& materials = registry.materials();
 
     const auto& entities = renderables.entities();

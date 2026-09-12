@@ -17,6 +17,7 @@
 #include "../components/renderable.hpp"
 #include "../components/material.hpp"
 #include "../components/sphere_collider.hpp"
+#include "../components/camera.hpp"
 
 namespace engine
 {
@@ -36,6 +37,7 @@ public:
         renderables_.remove(entity);
         materials_.remove(entity);
         sphereColliders_.remove(entity);
+        cameras_.remove(entity);
     }
 
     ComponentStorage<Transform>& transforms() {return transforms_;}
@@ -56,6 +58,9 @@ public:
     ComponentStorage<SphereCollider>& sphereColliders() {return sphereColliders_;}
     const ComponentStorage<SphereCollider>& sphereColliders() const {return sphereColliders_;}
 
+    ComponentStorage<Camera>& cameras() {return cameras_;}
+    const ComponentStorage<Camera>& cameras() const {return cameras_;}
+
 private:
 
     Entity nextEntity_ = 1;
@@ -67,6 +72,7 @@ private:
     ComponentStorage<Renderable> renderables_;
     ComponentStorage<Material> materials_;
     ComponentStorage<SphereCollider> sphereColliders_;
+    ComponentStorage<Camera> cameras_;
 };
 
 }

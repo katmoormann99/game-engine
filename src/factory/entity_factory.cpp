@@ -15,6 +15,7 @@
 #include "engine/components/velocity.hpp"
 #include "engine/components/material.hpp"
 #include "engine/components/sphere_collider.hpp"
+#include "engine/components/camera.hpp"
 
 namespace engine 
 {
@@ -64,6 +65,33 @@ namespace engine
         registry_.materials().add(
             entity,
             material
+        );
+
+        return entity;
+    }
+
+    Entity EntityFactory::createCamera(const cg::Point3& position, const cg::Vector3& rotation, float fovDegrees, float aspectRatio, float nearPlane, float farPlane)
+    {
+        Entity entity = registry_.create();
+
+        registry_.transforms().add(
+            entity,
+            Transform{
+                position,
+                rotation,
+                cg::Vector3(1.0f, 1.0f, 1.0f)
+            }
+        );
+
+        registry_.cameras().add(
+            entity,
+            Camera{
+                fovDegrees,
+                aspectRatio,
+                nearPlane,
+                farPlane,
+                true
+            }
         );
 
         return entity;

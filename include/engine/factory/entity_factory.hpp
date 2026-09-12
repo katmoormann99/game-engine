@@ -53,8 +53,12 @@
             explicit EntityFactory(Registry &registry);
 
             Entity createSensor(const cg::Point3 &position, float detectionRadius);
+
             Entity createTarget(const cg::Point3 &position, const cg::Vector3 &velocity, double lifetime);
+
             Entity createStaticSurface(const cg::Point3& position, const cg::Vector3& rotation, const cg::Vector3& scale, const Material& material);
+
+            Entity createCamera(const cg::Point3& position, const cg::Vector3& rotation, float fovDegrees, float aspectRatio, float nearPlane, float farPlane);
 
         private:
             Registry &registry_;

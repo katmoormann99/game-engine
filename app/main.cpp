@@ -37,9 +37,15 @@ int main()
     engine::Entity target2 = factory.createTarget(cg::Point3(25.0f, 0.0f, 30.0f), cg::Vector3(-15.0f, 0.0f, 0.0f), 60.0);
     engine::Entity target3 = factory.createTarget(cg::Point3(0.0f, 20.0f, 40.0f), cg::Vector3(0.0f, -12.0f, -4.0f), 60.0);
 
-    engine::Entity floor = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 0.0f), cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.6f, 0.5f, 0.2f, 1.0f});
-    engine::Entity ceiling = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 100.0f),cg::Vector3(180.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.1f, 0.4f, 1.0f, 1.0f});
+    engine::Entity floor = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 0.0f), cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.22f, 0.20f, 0.18f, 1.0f});
+    engine::Entity ceiling = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 100.0f),cg::Vector3(180.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.20f, 0.25f, 0.34f, 1.0f});
+    engine::Entity back_wall = factory.createStaticSurface(cg::Point3(0.0f, 50.0f, 50.0f),cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.34f, 0.22f, 0.25f, 1.0f});
+    engine::Entity left_wall = factory.createStaticSurface(cg::Point3(-50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, 90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.20f, 0.31f, 0.26f, 1.0f});
+    engine::Entity right_wall = factory.createStaticSurface(cg::Point3(50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, -90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.28f, 0.22f, 0.34f, 1.0f});
+    // engine::Entity front_wall = factory.createStaticSurface(cg::Point3(0.0f, -50.0f, 50.0f),cg::Vector3(-90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.7f, 0.7f, 0.7f, 1.0f});
 
+    engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(0.0f, 0.0f, 0.0f), 70.0f, 1.0f, 1.0f, 200.0f);
+    
     bool running = true;
 
     auto previousTime = std::chrono::steady_clock::now();
@@ -47,17 +53,11 @@ int main()
     while (running)
     {
         const auto currentTime = std::chrono::steady_clock::now();
-
         const std::chrono::duration<double> elapsed = currentTime - previousTime;
-
         previousTime = currentTime;
-
         const double frame_dt = elapsed.count();
-
         running = graphics.handleEvents();
-
         simulation.update(frame_dt);
-
         graphics.beginFrame();
 
         renderSystem.render(

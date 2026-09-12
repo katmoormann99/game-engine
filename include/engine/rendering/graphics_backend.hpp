@@ -10,6 +10,8 @@
 
 #include "engine/components/transform.hpp"
 #include "engine/components/material.hpp"
+#include "engine/components/camera.hpp"
+
 #include "engine/rendering/mesh.hpp"
 #include "geometry/matrix.hpp"
 
@@ -37,6 +39,8 @@ public:
 
     void endFrame();
     void shutdown();
+
+    void setCamera(const Transform& transform, const Camera& camera);
 
 private:
 

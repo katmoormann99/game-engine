@@ -68,6 +68,40 @@ namespace engine
 
     } // anonymous namespace
 
+    void GraphicsBackend::setCamera(const Transform& transform, const Camera& camera)
+    {
+        cg::Matrix4x4 cameraWorld;
+
+        cameraWorld.translate(
+            transform.position.x,
+            transform.position.y,
+            transform.position.z
+        );
+
+        cameraWorld.rotate_x(transform.rotation.x);
+        cameraWorld.rotate_y(transform.rotation.y);
+        cameraWorld.rotate_z(transform.rotation.z);
+
+        // View matrix = inverse of camera's world transform.
+        view_ = cameraWorld.get_inverse();
+
+        const float radians = camera.fovDegrees * 3.14159265358979323846f / 180.0f;
+
+        const float f = 1.0f / std::tan(radians * 0.5f);
+
+        const float nearPlane = camera.nearPlane;
+
+        const float farPlane = camera.farPlane;
+
+        projection_.set_identity();
+        projection_.m00() = f / camera.aspectRatio;
+        projection_.m11() = f;
+        projection_.m22() = (farPlane + nearPlane) / (nearPlane - farPlane);
+        projection_.m23() = (2.0f * farPlane * nearPlane) / (nearPlane - farPlane);
+        projection_.m32() = -1.0f;
+        projection_.m33() = 0.0f;
+    }
+
     // Initialize SDL, create the window, and create the OpenGL context.
     bool GraphicsBackend::initialize()
     {
@@ -178,15 +212,6 @@ namespace engine
         projection_.m33() = 0.0f;
 
         view_.set_identity();
-
-        view_.m00() = 1.0f;
-        view_.m11() = 0.0f;
-        view_.m12() = 1.0f;
-        view_.m13() = -50.0f;
-        view_.m21() = -1.0f;
-        view_.m22() = 0.0f;
-        view_.m23() = -90.0f;
-        view_.m33() = 1.0f;
 
         return true;
     }
