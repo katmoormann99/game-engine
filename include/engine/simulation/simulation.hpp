@@ -13,6 +13,7 @@
 #include "engine/systems/lifetime_system.hpp"
 #include "engine/systems/sensor_system.hpp"
 #include "engine/systems/collision_system.hpp"
+#include "engine/systems/weapon_system.hpp"
 
 namespace engine
 {
@@ -31,6 +32,8 @@ public:
 
     void update(double frame_dt);
 
+    Entity fireWeapon(EntityFactory& factory, Entity weaponEntity, Entity owner, const cg::Point3& position, const cg::Vector3& direction);
+
 private:
     void step();
 
@@ -41,6 +44,7 @@ private:
     LifetimeSystem lifetimeSystem_;
     SensorSystem sensorSystem_;
     CollisionSystem collisionSystem_;
+    WeaponSystem weaponSystem_;
 
     double accumulator_ = 0.0;
 };

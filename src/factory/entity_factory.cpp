@@ -84,4 +84,35 @@ namespace engine
         return entity;
     }
 
+    Entity EntityFactory::createWeapon(const cg::Point3& position, float projectileSpeed, float cooldownSeconds)
+    {
+        Entity entity = registry_.create();
+
+        registry_.transforms().add(entity, Transform{position, cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(1.0f, 1.0f, 1.0f)});
+        registry_.weapons().add(entity, Weapon{projectileSpeed, cooldownSeconds, 0.0f});
+
+        return entity;
+    }
+
+    Entity EntityFactory::createProjectile(Entity owner, const cg::Point3& position, const cg::Vector3& velocity, float damage, double lifetime)
+    {
+        Entity entity = registry_.create();
+
+        registry_.transforms().add(entity, Transform{position, cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(0.25f, 1.5f, 0.25f)});
+
+        registry_.velocities().add(entity, Velocity{velocity});
+        registry_.sphereColliders().add(entity,SphereCollider{0.5f});
+
+        registry_.projectiles().add(entity, Projectile{owner, damage});
+
+        registry_.lifetimes().add(entity, Lifetime{lifetime});
+
+        // We will give this its own mesh shortly.
+        registry_.renderables().add(entity, Renderable{MeshId::Projectile});
+
+        registry_.materials().add(entity, Material{1.0f, 0.85f, 0.15f, 1.0f});
+
+        return entity;
+    }
+
 }

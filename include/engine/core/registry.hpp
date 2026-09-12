@@ -19,6 +19,8 @@
 #include "../components/sphere_collider.hpp"
 #include "../components/camera.hpp"
 #include "../components/light.hpp"
+#include "../components/weapon.hpp"
+#include "../components/projectile.hpp"
 
 namespace engine
 {
@@ -40,6 +42,8 @@ public:
         sphereColliders_.remove(entity);
         cameras_.remove(entity);
         lights_.remove(entity);
+        weapons_.remove(entity);
+        projectiles_.remove(entity);
     }
 
     ComponentStorage<Transform>& transforms() {return transforms_;}
@@ -66,8 +70,13 @@ public:
     ComponentStorage<Light>& lights() {return lights_;}
     const ComponentStorage<Light>& lights() const {return lights_;}
 
-private:
+    ComponentStorage<Weapon>& weapons() {return weapons_;}
+    const ComponentStorage<Weapon>& weapons() const {return weapons_;}
 
+    ComponentStorage<Projectile>& projectiles() {return projectiles_;}
+    const ComponentStorage<Projectile>& projectiles() const {return projectiles_;}
+
+private:
     Entity nextEntity_ = 1;
 
     ComponentStorage<Transform> transforms_;
@@ -79,6 +88,9 @@ private:
     ComponentStorage<SphereCollider> sphereColliders_;
     ComponentStorage<Camera> cameras_;
     ComponentStorage<Light> lights_;
+
+    ComponentStorage<Weapon> weapons_;
+    ComponentStorage<Projectile> projectiles_;
 };
 
 }

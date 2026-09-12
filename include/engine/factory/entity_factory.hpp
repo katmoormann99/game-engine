@@ -62,6 +62,10 @@
 
             Entity createLight(const cg::Point3& position, const cg::Vector3& color, float intensity, float innerCutoffDegrees, float outerCutoffDegrees);
 
+            Entity createWeapon(const cg::Point3& position, float projectileSpeed, float cooldownSeconds);
+
+            Entity createProjectile(Entity owner, const cg::Point3& position, const cg::Vector3& velocity, float damage, double lifetime);
+
         private:
             Registry &registry_;
     };

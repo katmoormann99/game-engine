@@ -48,6 +48,8 @@ int main()
     
     engine::Entity light = factory.createLight(cg::Point3(0.0f, -100.0f, 50.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);
 
+    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -40.0f, 50.0f), 80.0f, 0.25f);
+
     bool running = true;
 
     auto previousTime = std::chrono::steady_clock::now();
@@ -58,8 +60,22 @@ int main()
         const std::chrono::duration<double> elapsed = currentTime - previousTime;
         previousTime = currentTime;
         const double frame_dt = elapsed.count();
+
         running = graphics.handleEvents();
+
+        if (graphics.firePressed())
+        {
+            simulation.fireWeapon(
+                factory,
+                weapon,
+                camera,
+                cg::Point3(0.0f, -40.0f, 50.0f),
+                cg::Vector3(0.0f, 1.0f, 0.0f)
+            );
+        }
+
         simulation.update(frame_dt);
+        
         graphics.beginFrame();
 
         renderSystem.render(

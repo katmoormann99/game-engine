@@ -453,7 +453,6 @@ namespace engine
         projection_.m33() = 0.0f;
     }
 
-
     void GraphicsBackend::setLight(const Transform& transform, const Light& light)
     {
         glUseProgram(shaderProgram_);
@@ -478,11 +477,20 @@ namespace engine
         glUniform1f(outerCutoffLocation, std::cos(outerRadians));
     }
 
+    bool GraphicsBackend::firePressed() const
+    {
+        return firePressed_;
+    }
+
     // Poll SDL events.
     // Return false when the user wants to close the application.
     bool GraphicsBackend::handleEvents()
     {
         SDL_Event event;
+
+        // Reset every frame.
+        // This becomes true only during a frame where SPACE is pressed.
+        firePressed_ = false;
 
         while (SDL_PollEvent(&event))
         {
@@ -493,21 +501,32 @@ namespace engine
                     return false;
 
                 case SDL_EVENT_KEY_DOWN:
+                {
                     if (event.key.key == SDLK_ESCAPE)
                     {
                         return false;
                     }
+
+                    if (event.key.key == SDLK_SPACE)
+                    {
+                        firePressed_ = true;
+                    }
+
                     break;
+                }
 
                 case SDL_EVENT_WINDOW_RESIZED:
                 case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+                {
                     glViewport(
                         0,
                         0,
                         event.window.data1,
                         event.window.data2
                     );
+
                     break;
+                }
 
                 default:
                     break;
@@ -516,7 +535,6 @@ namespace engine
 
         return true;
     }
-
 
     // Clear the framebuffer before rendering a new frame.
     void GraphicsBackend::beginFrame()
@@ -549,6 +567,10 @@ namespace engine
 
             case MeshId::Target:
                 mesh = &targetMesh_;
+                break;
+
+            case MeshId::Projectile:
+                mesh = &unitSquareMesh_;
                 break;
 
             case MeshId::Sensor:

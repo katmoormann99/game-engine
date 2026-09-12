@@ -16,7 +16,8 @@ namespace engine
     {
         UnitSquare = 1,
         Target = 2,
-        Sensor = 3
+        Sensor = 3,
+        Projectile = 4
     };
 
     struct Renderable

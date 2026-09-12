@@ -54,12 +54,30 @@ namespace engine
         }
     }
 
+    Entity Simulation::fireWeapon(
+        EntityFactory& factory,
+        Entity weaponEntity,
+        Entity owner,
+        const cg::Point3& position,
+        const cg::Vector3& direction
+    )
+    {
+        return weaponSystem_.fire(
+            registry_,
+            factory,
+            weaponEntity,
+            owner,
+            position,
+            direction
+        );
+    }
 
 
     void Simulation::step()
     {
         const float dt = static_cast<float>(time_.fixed_dt);
 
+        weaponSystem_.update(registry_, dt);
         movementSystem_.update(registry_, dt);
         collisionSystem_.update(registry_, dt);
         sensorSystem_.update(registry_);

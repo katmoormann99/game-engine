@@ -31,6 +31,8 @@ public:
     bool initialize();
     bool handleEvents();
 
+    bool firePressed() const;
+
     void beginFrame();
 
     void drawMesh(
@@ -57,6 +59,7 @@ private:
     bool createTargetMesh();
     bool createShaderProgram();
 
+
     GPUMesh unitSquareMesh_;
     GPUMesh targetMesh_;
 
@@ -64,6 +67,8 @@ private:
 
     cg::Matrix4x4 view_;
     cg::Matrix4x4 projection_;
+
+    bool firePressed_ = false;
 };
 
 } // namespace engine

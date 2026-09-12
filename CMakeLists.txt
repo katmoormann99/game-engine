@@ -22,6 +22,7 @@ add_executable(
     src/systems/sensor_system.cpp
     src/systems/render_system.cpp
     src/systems/collision_system.cpp
+    src/systems/weapon_system.cpp
 
     src/spatial/spatial_grid.cpp
 
