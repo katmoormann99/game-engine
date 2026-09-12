@@ -1,0 +1,74 @@
+@startuml
+title ComponentStorage<T> — How the ECS Storage Works
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultTextAlignment left
+
+class "ComponentStorage<T>" as Storage {
+  - components_ : std::vector<T>
+  - entities_ : std::vector<Entity>
+  - entityToIndex_ : std::unordered_map<Entity, std::size_t>
+  --
+  + add(entity, component)
+  + has(entity) : bool
+  + get(entity) : T&
+  + get(entity) const : const T&
+  + components() : std::vector<T>&
+  + entities() const : const std::vector<Entity>&
+  + remove(entity)
+}
+
+note top of Storage
+ComponentStorage<T> keeps three data structures synchronized:
+
+1. components_(i) = the component data
+2. entities_(i) = the Entity that owns that component
+3. entityToIndex_(entity) = i
+
+The shared index i connects them.
+end note
+
+package "Example: ComponentStorage<Velocity>" {
+
+  object "components_" as Components {
+    index 0 : Velocity A
+    index 1 : Velocity B
+    index 2 : Velocity C
+    index 3 : Velocity D
+  }
+
+  object "entities_" as Entities {
+    index 0 : Entity 10
+    index 1 : Entity 42
+    index 2 : Entity 71
+    index 3 : Entity 99
+  }
+
+  object "entityToIndex_" as Lookup {
+    Entity 10 : index 0
+    Entity 42 : index 1
+    Entity 71 : index 2
+    Entity 99 : index 3
+  }
+}
+
+Storage --> Components : owns
+Storage --> Entities : owns
+Storage --> Lookup : owns
+
+Lookup ..> Entities : index
+Lookup ..> Components : same index
+
+note right of Lookup
+Example lookup:
+
+get(Entity 42)
+
+Entity 42
+  -> index 1
+  -> components_(1)
+  -> Velocity B
+end note
+
+@enduml
