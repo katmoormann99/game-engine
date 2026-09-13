@@ -75,7 +75,7 @@ namespace engine
 
     } // anonymous namespace
 
-    // Initialize SDL, create the window, and create the OpenGL context.
+    // Initialize SDL, OpenGL, meshes, shaders, skybox, and arena box.
     bool GraphicsBackend::initialize()
     {
         if (!SDL_Init(SDL_INIT_VIDEO))
@@ -84,12 +84,8 @@ namespace engine
             return false;
         }
 
-        // Request a core OpenGL context.
-        SDL_GL_SetAttribute(
-            SDL_GL_CONTEXT_PROFILE_MASK,
-            SDL_GL_CONTEXT_PROFILE_CORE
-        );
-
+        // Request core OpenGL.
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
         SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
         SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
@@ -102,38 +98,13 @@ namespace engine
             return false;
         }
 
-        SDL_SetStringProperty(
-            props,
-            SDL_PROP_WINDOW_CREATE_TITLE_STRING,
-            "Kat Moormann ECS Game Engine"
-        );
-
-        SDL_SetBooleanProperty(
-            props,
-            SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
-            true
-        );
-
-        SDL_SetBooleanProperty(
-            props,
-            SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN,
-            true
-        );
-
-        SDL_SetNumberProperty(
-            props,
-            SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
-            800
-        );
-
-        SDL_SetNumberProperty(
-            props,
-            SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-            800
-        );
+        SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Kat Moormann ECS Game Engine");
+        SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
+        SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_OPENGL_BOOLEAN, true);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, 800);
+        SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, 800);
 
         g_window = SDL_CreateWindowWithProperties(props);
-
         SDL_DestroyProperties(props);
 
         if (g_window == nullptr)
@@ -142,7 +113,7 @@ namespace engine
             return false;
         }
 
-        // Create the OpenGL rendering context.
+        // Create OpenGL context.
         g_context = SDL_GL_CreateContext(g_window);
 
         if (g_context == nullptr)
@@ -154,34 +125,23 @@ namespace engine
         std::cout << "OpenGL: " << glGetString(GL_VERSION) << '\n';
         std::cout << "GLSL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << '\n';
 
-        // Default OpenGL state.
+        // Set OpenGL state.
         glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
-
         glEnable(GL_DEPTH_TEST);
-
         glFrontFace(GL_CCW);
         glCullFace(GL_BACK);
         glEnable(GL_CULL_FACE);
-
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glViewport(0, 0, 800, 800);
 
-        if (!createShaderProgram())
-        {
-            return false;
-        }
+        // Create scene rendering resources.
+        if (!createShaderProgram()) { return false; }
+        if (!createUnitSquareMesh()) { return false; }
+        if (!createTargetMesh()) { return false; }
 
-        if (!createUnitSquareMesh())
-        {
-            return false;
-        }
-
-        if (!createTargetMesh())
-        {
-            return false;
-        }
-
+        // Set default projection.
         projection_.set_identity();
-
         projection_.m00() = 1.428f;
         projection_.m11() = 1.428f;
         projection_.m22() = -1.010f;
@@ -191,23 +151,40 @@ namespace engine
 
         view_.set_identity();
 
-        if (!skybox_.initialize(
-        {
-            "../assets/skybox/galaxy_3_v1.jpg",
-            "../assets/skybox/galaxy_3_v1.jpg",
-            "../assets/skybox/galaxy_3_v1.jpg",
-            "../assets/skybox/galaxy_3_v1.jpg",
-            "../assets/skybox/galaxy_3_v1.jpg",
-            "../assets/skybox/galaxy_3_v1.jpg"
+        // Initialize skybox.
+        // if (!skybox_.initialize({
+        //     "../assets/skybox/galaxy_3_v1.jpg",
+        //     "../assets/skybox/galaxy_3_v1.jpg",
+        //     "../assets/skybox/galaxy_3_v1.jpg",
+        //     "../assets/skybox/galaxy_3_v1.jpg",
+        //     "../assets/skybox/galaxy_3_v1.jpg",
+        //     "../assets/skybox/galaxy_3_v1.jpg"
+        // }))
+
+        // Initialize skybox.
+        if (!skybox_.initialize({
+            "../assets/skybox/right.jpg",   // +X
+            "../assets/skybox/left.jpg",    // -X
+            "../assets/skybox/top.jpg",     // +Y
+            "../assets/skybox/bottom.jpg",  // -Y
+            "../assets/skybox/front.jpg",   // +Z
+            "../assets/skybox/back.jpg"     // -Z
         }))
         {
             std::cerr << "Failed to initialize skybox.\n";
             return false;
         }
 
+        // Initialize arena wireframe.
+        if (!arenaBox_.initialize())
+        {
+            std::cerr << "Failed to initialize arena box.\n";
+            return false;
+        }
+
         return true;
     }
-
+    
     bool GraphicsBackend::createShaderProgram()
     {
         const std::string vertexSource = loadTextFile("shaders/basic.vert");
@@ -559,14 +536,16 @@ namespace engine
         );
     }
 
-
     void GraphicsBackend::drawSkybox()
     {
-        skybox_.draw(
-            view_.get(),
-            projection_.get()
-        );
+        skybox_.draw(view_.get(), projection_.get());
     }
+
+    void GraphicsBackend::drawArenaBox()
+    {
+        arenaBox_.draw(view_.get(), projection_.get());
+    }
+
 
     // Draw one ECS entity.
     //
@@ -670,6 +649,7 @@ namespace engine
         // Skybox also owns OpenGL resources.
         // Destroy these while the GL context still exists.
         skybox_.shutdown();
+        arenaBox_.shutdown();
 
         if (g_context != nullptr)
         {

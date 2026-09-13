@@ -1,8 +1,7 @@
 //============================================================================
 // Author: Kat Moormann
 // File: render_system.cpp
-// Purpose: Implements rendering traversal for entities that contain both
-//          Transform and Renderable components.
+// Purpose: Renders ECS entities and scene graphics.
 // Date: June 24 2025
 //============================================================================
 
@@ -14,98 +13,68 @@
 namespace engine
 {
 
-void RenderSystem::render(const Registry& registry, GraphicsBackend &graphics) const
+void RenderSystem::render(const Registry& registry, GraphicsBackend& graphics) const
 {
-    
     const auto& transforms = registry.transforms();
 
-    // Go through every entity that has a Light component 
+    // Set the active light.
     const auto& lights = registry.lights();
+
     for (Entity lightEntity : lights.entities())
     {
-        // If this light entity does NOT have a Transform SKIP IT
-        // Transform is necessary data for the placement of the light 
-        if (!transforms.has(lightEntity)){
-            continue;
-        }
-        
+        if (!transforms.has(lightEntity)) { continue; }
+
         const Light& light = lights.get(lightEntity);
 
-        if (!light.active)
-        {
-            continue;
-        }
-        
-        if (firstRender_)
-        {
-            std::cout
-                << "[RENDER] Using Light Entity "
-                << lightEntity << '\n';
-        }
+        if (!light.active) { continue; }
+
+        if (firstRender_) { std::cout << "[RENDER] Using Light Entity " << lightEntity << '\n'; }
 
         graphics.setLight(transforms.get(lightEntity), light);
         break;
     }
 
-    // Go through every entity that has a Camera component 
+    // Set the active camera and draw scene boundaries.
     const auto& cameras = registry.cameras();
 
     for (Entity cameraEntity : cameras.entities())
     {
-        // If this camera entity does NOT have a Transform SKIP IT
-        // Transform is necessary data for the placement of the camera 
-        if (!transforms.has(cameraEntity)) {continue;}
+        if (!transforms.has(cameraEntity)) { continue; }
 
         const Camera& camera = cameras.get(cameraEntity);
 
-        if (!camera.active) {continue;}
-        if (firstRender_)
-        {
-            std::cout
-                << "[RENDER] Using Camera Entity "
-                << cameraEntity << '\n';
-        }
+        if (!camera.active) { continue; }
 
-        graphics.setCamera(
-            transforms.get(cameraEntity), 
-            camera
-        );
+        if (firstRender_) { std::cout << "[RENDER] Using Camera Entity " << cameraEntity << '\n'; }
+
+        graphics.setCamera(transforms.get(cameraEntity), camera);
         graphics.drawSkybox();
+        graphics.drawArenaBox();
+        break;
     }
 
+    // Draw ECS entities.
     const auto& renderables = registry.renderables();
     const auto& materials = registry.materials();
-    const auto& entities = renderables.entities();
 
-    for (Entity entity : entities)
+    for (Entity entity : renderables.entities())
     {
-        if (!transforms.has(entity) || !materials.has(entity))
-        {
-            continue;
-        }
+        if (!transforms.has(entity) || !materials.has(entity)) { continue; }
 
         const Renderable& renderable = renderables.get(entity);
         const Transform& transform = transforms.get(entity);
         const Material& material = materials.get(entity);
 
-        if (firstRender_)
-        {
-            std::cout << "[RENDER] Drawing Entity " << entity << " | MeshId " << static_cast<int>(renderable.meshId) << '\n';
-        }
+        if (firstRender_) { std::cout << "[RENDER] Drawing Entity " << entity << " | MeshId " << static_cast<int>(renderable.meshId) << '\n'; }
 
-        graphics.drawMesh(
-            renderables.get(entity).meshId,
-            transforms.get(entity),
-            materials.get(entity)
-        );
-
-        
+        graphics.drawMesh(renderable.meshId, transform, material);
     }
+
     if (firstRender_)
-        {
-            std::cout << "[RENDER] Render traversal complete\n";
-            firstRender_ = false;
-        }
+    {
+        std::cout << "[RENDER] Render traversal complete\n";
+        firstRender_ = false;
     }
-
 }
+
+} // namespace engine

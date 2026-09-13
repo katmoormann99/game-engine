@@ -14,11 +14,16 @@
 #include "engine/components/light.hpp"
 #include "engine/components/renderable.hpp"
 #include "engine/rendering/skybox.hpp"
+#include "engine/rendering/arena_box.hpp"
 
 #include "engine/rendering/mesh.hpp"
 #include "geometry/matrix.hpp"
 
 #include <cstdint>
+
+
+
+
 
 namespace engine
 {
@@ -43,6 +48,7 @@ public:
     );
 
     void drawSkybox();
+    void drawArenaBox();
 
     void setCamera(
         const Transform& transform,
@@ -74,6 +80,7 @@ private:
     bool firePressed_ = false;
 
     Skybox skybox_;
+    ArenaBox arenaBox_;
 };
 
 } // namespace engine

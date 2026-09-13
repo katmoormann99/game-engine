@@ -36,26 +36,17 @@ struct CollisionPlane
 };
 
 // x = -50 to +50
-// y = -50 to +50
+// y = -30 to +30
 // z =   0 to 100
 const std::array<CollisionPlane, 6> ROOM_PLANES =
 {{
-    // Left wall
     {cg::Vector3( 1.0f,  0.0f,  0.0f), 50.0f},
-
-    // Right wall
     {cg::Vector3(-1.0f,  0.0f,  0.0f), 50.0f},
 
-    // Front wall
-    {cg::Vector3( 0.0f,  1.0f,  0.0f), 50.0f},
+    {cg::Vector3( 0.0f,  1.0f,  0.0f), 30.0f},
+    {cg::Vector3( 0.0f, -1.0f,  0.0f), 30.0f},
 
-    // Back wall
-    {cg::Vector3( 0.0f, -1.0f,  0.0f), 50.0f},
-
-    // Floor
     {cg::Vector3( 0.0f,  0.0f,  1.0f), 0.0f},
-
-    // Ceiling
     {cg::Vector3( 0.0f,  0.0f, -1.0f), 100.0f}
 }};
 

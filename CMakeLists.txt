@@ -32,6 +32,7 @@ add_executable(
     src/rendering/obj_loader.cpp
     src/rendering/skybox.cpp
     src/rendering/stb_image.cpp
+    src/rendering/arena_box.cpp
 
     src/factory/entity_factory.cpp
 
@@ -59,59 +60,39 @@ target_link_libraries(
         "-framework OpenGL"
 )
 
-set(SHADER_SOURCE_DIR
-    ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+set(SHADER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders)
+set(SHADER_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+
+set(SHADER_FILES
+    basic.vert
+    basic.frag
+    skybox.vert
+    skybox.frag
+    arena_box.vert
+    arena_box.frag
 )
 
-set(SHADER_BINARY_DIR
-    ${CMAKE_CURRENT_BINARY_DIR}/shaders
-)
+add_custom_target(copy_shaders ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_BINARY_DIR}
 
-add_custom_command(
-    OUTPUT
-        ${SHADER_BINARY_DIR}/basic.vert
-        ${SHADER_BINARY_DIR}/basic.frag
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/basic.vert ${SHADER_BINARY_DIR}/basic.vert
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/basic.frag ${SHADER_BINARY_DIR}/basic.frag
 
-    COMMAND
-        ${CMAKE_COMMAND} -E make_directory
-        ${SHADER_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/skybox.vert ${SHADER_BINARY_DIR}/skybox.vert
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/skybox.frag ${SHADER_BINARY_DIR}/skybox.frag
 
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        ${SHADER_SOURCE_DIR}/basic.vert
-        ${SHADER_BINARY_DIR}/basic.vert
-
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        ${SHADER_SOURCE_DIR}/basic.frag
-        ${SHADER_BINARY_DIR}/basic.frag
-
-    COMMAND
-    ${CMAKE_COMMAND} -E copy_if_different
-    ${SHADER_SOURCE_DIR}/skybox.vert
-    ${SHADER_BINARY_DIR}/skybox.vert
-
-    COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        ${SHADER_SOURCE_DIR}/skybox.frag
-        ${SHADER_BINARY_DIR}/skybox.frag
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/arena_box.vert ${SHADER_BINARY_DIR}/arena_box.vert
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/arena_box.frag ${SHADER_BINARY_DIR}/arena_box.frag
 
     DEPENDS
         ${SHADER_SOURCE_DIR}/basic.vert
         ${SHADER_SOURCE_DIR}/basic.frag
         ${SHADER_SOURCE_DIR}/skybox.vert
         ${SHADER_SOURCE_DIR}/skybox.frag
+        ${SHADER_SOURCE_DIR}/arena_box.vert
+        ${SHADER_SOURCE_DIR}/arena_box.frag
+
     COMMENT "Updating shaders"
 )
 
-add_custom_target(
-    copy_shaders ALL
-    DEPENDS
-        ${SHADER_BINARY_DIR}/basic.vert
-        ${SHADER_BINARY_DIR}/basic.frag
-)
-
-add_dependencies(
-    game_engine
-    copy_shaders
-)
+add_dependencies(game_engine copy_shaders)
