@@ -39,7 +39,7 @@ namespace engine
     {
         Entity entity = registry_.create();
         std::cout << "\n[FACTORY] Creating Target | Entity " << entity << std::endl;
-        registry_.transforms().add(entity, Transform{position, cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(0.03f, 0.03f, 0.03f)});
+        registry_.transforms().add(entity, Transform{position, cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(0.05f, 0.05f, 0.05f)});
         registry_.velocities().add(entity, Velocity{velocity});
         registry_.renderables().add(entity, Renderable{MeshId::Target});
         registry_.lifetimes().add(entity, Lifetime{lifetime});

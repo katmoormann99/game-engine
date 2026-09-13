@@ -64,7 +64,7 @@ Entity WeaponSystem::fire(
             position,
             projectileVelocity,
             1.0f,
-            3.0
+            6.0
         );
 
     weapon.cooldownRemaining = weapon.cooldownSeconds;

@@ -9,7 +9,7 @@
 #pragma once
 
 #include "engine/core/registry.hpp"
-
+#include "engine/spatial/spatial_grid.hpp"
 namespace engine
 {
 
@@ -36,7 +36,13 @@ class CollisionSystem
 {
 public:
 
+    explicit CollisionSystem(float cellSize) : spatialGrid_(cellSize) {}
+
     void update(Registry& registry, float dt);
+
+private: 
+
+    SpatialGrid spatialGrid_;
 };
 
 } // namespace engine

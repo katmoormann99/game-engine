@@ -110,16 +110,11 @@ bool sphereSphereTimeOfImpact(
     float& hitTime
 )
 {
-    cg::Vector3 relativePosition(
-        centerB,
-        centerA
-    );
+    cg::Vector3 relativePosition(centerB, centerA);
 
-    cg::Vector3 relativeVelocity =
-        velocityA - velocityB;
+    cg::Vector3 relativeVelocity = velocityA - velocityB;
 
-    const float combinedRadius =
-        radiusA + radiusB;
+    const float combinedRadius = radiusA + radiusB;
 
     // Solve:
     //
@@ -129,17 +124,9 @@ bool sphereSphereTimeOfImpact(
     //
     // at^2 + bt + c = 0
 
-    const float a =
-        relativeVelocity.dot(relativeVelocity);
-
-    const float b =
-        2.0f *
-        relativePosition.dot(relativeVelocity);
-
-    const float c =
-        relativePosition.dot(relativePosition) -
-        combinedRadius * combinedRadius;
-
+    const float a = relativeVelocity.dot(relativeVelocity);
+    const float b = 2.0f * relativePosition.dot(relativeVelocity);
+    const float c = relativePosition.dot(relativePosition) - combinedRadius * combinedRadius;
 
     // No meaningful relative movement.
     if (a < 1e-8f)
@@ -147,24 +134,15 @@ bool sphereSphereTimeOfImpact(
         return false;
     }
 
-
-    const float discriminant =
-        b * b -
-        4.0f * a * c;
+    const float discriminant = b * b - 4.0f * a * c;
 
     if (discriminant < 0.0f)
     {
         return false;
     }
 
-
-    const float sqrtDiscriminant =
-        std::sqrt(discriminant);
-
-    const float t0 =
-        (-b - sqrtDiscriminant) /
-        (2.0f * a);
-
+    const float sqrtDiscriminant = std::sqrt(discriminant);
+    const float t0 = (-b - sqrtDiscriminant) / (2.0f * a);
 
     constexpr float EPS_T = 1e-5f;
 
@@ -185,6 +163,8 @@ bool sphereSphereTimeOfImpact(
 
 void CollisionSystem::update(Registry& registry, float dt)
 {
+    const auto collisionStart = std::chrono::steady_clock::now();
+
     constexpr float EPS_T = 1e-5f;
     constexpr float NUDGE = 1e-3f;
     constexpr float EPS2 = 1e-6f;
@@ -234,46 +214,45 @@ void CollisionSystem::update(Registry& registry, float dt)
     // PHASE 1: Find sphere-sphere collision events for this fixed timestep.
     std::unordered_map<Entity, PendingSphereCollision> pendingSphereCollisions;
 
+    // Rebuild the spatial grid from current collider positions.
+    spatialGrid_.clear();
+    const auto phase1Start = std::chrono::steady_clock::now();
 
-    for (std::size_t i = 0; i < entities.size(); ++i)
+    for (Entity entity : entities)
     {
-        Entity entityA = entities[i];
-        if (!transforms.has(entityA) || !velocities.has(entityA))
+        if (!transforms.has(entity)) { continue; }
+        spatialGrid_.insert(entity, transforms.get(entity).position);
+    }
+
+    // Check only nearby collision candidates.
+    for (Entity entityA : entities)
+    {
+        if (!transforms.has(entityA) || !velocities.has(entityA)) { continue; }
+
+        Transform& transformA = transforms.get(entityA);
+        Velocity& velocityA = velocities.get(entityA);
+        const SphereCollider& colliderA = colliders.get(entityA);
+
+        const float movementDistance = velocityA.linear.norm() * dt;
+        const float searchRadius = colliderA.radius * 2.0f + movementDistance;
+
+        std::vector<Entity> nearby = spatialGrid_.queryNearby(transformA.position, searchRadius);
+
+        for (Entity entityB : nearby)
         {
-            continue;
-        }
+            if (entityB <= entityA) { continue; }
+            if (!transforms.has(entityB) || !velocities.has(entityB) || !colliders.has(entityB)) { continue; }
 
-
-        for (std::size_t j = i + 1; j < entities.size(); ++j)
-        {
-            Entity entityB = entities[j];
-            if (!transforms.has(entityB) || !velocities.has(entityB))
-            {
-                continue;
-            }
-
-
-            Transform& transformA = transforms.get(entityA);
             Transform& transformB = transforms.get(entityB);
-
-            Velocity& velocityA = velocities.get(entityA);
             Velocity& velocityB = velocities.get(entityB);
-
-            const SphereCollider& colliderA = colliders.get(entityA);
             const SphereCollider& colliderB = colliders.get(entityB);
-
-
-            // Start-of-step overlap correction.
-            //
-            // If two spheres are already overlapping, separate
-            // them slightly and reflect their directions.
 
             cg::Vector3 AB(transformA.position, transformB.position);
 
             const float minimumDistance = colliderA.radius + colliderB.radius;
             const float distanceSquared = AB.norm_squared();
 
-
+            // Already overlapping.
             if (distanceSquared < minimumDistance * minimumDistance)
             {
                 if (distanceSquared > EPS2)
@@ -284,71 +263,33 @@ void CollisionSystem::update(Registry& registry, float dt)
                     velocityA.linear = velocityA.linear.reflect(normal);
                     velocityB.linear = velocityB.linear.reflect(normal * -1.0f);
 
-                    // Small separation so they do not remain overlapping.
-                    transformA.position = cg::Point3(
-                        transformA.position.x - normal.x * NUDGE,
-                        transformA.position.y - normal.y * NUDGE,
-                        transformA.position.z - normal.z * NUDGE
-                    );
-
-                    transformB.position = cg::Point3(
-                        transformB.position.x + normal.x * NUDGE,
-                        transformB.position.y + normal.y * NUDGE,
-                        transformB.position.z + normal.z * NUDGE
-                    );
+                    transformA.position = cg::Point3(transformA.position.x - normal.x * NUDGE, transformA.position.y - normal.y * NUDGE, transformA.position.z - normal.z * NUDGE);
+                    transformB.position = cg::Point3(transformB.position.x + normal.x * NUDGE, transformB.position.y + normal.y * NUDGE, transformB.position.z + normal.z * NUDGE);
                 }
 
                 continue;
             }
 
-
             // Continuous sphere-sphere collision.
             float hitTime = 0.0f;
 
-            if (!sphereSphereTimeOfImpact(
-                    transformA.position,
-                    velocityA.linear,
-                    colliderA.radius,
+            if (!sphereSphereTimeOfImpact(transformA.position, velocityA.linear, colliderA.radius, transformB.position, velocityB.linear, colliderB.radius, dt, hitTime)) { continue; }
 
-                    transformB.position,
-                    velocityB.linear,
-                    colliderB.radius,
+            cg::Point3 hitA(transformA.position.x + velocityA.linear.x * hitTime, transformA.position.y + velocityA.linear.y * hitTime, transformA.position.z + velocityA.linear.z * hitTime);
+            cg::Point3 hitB(transformB.position.x + velocityB.linear.x * hitTime, transformB.position.y + velocityB.linear.y * hitTime, transformB.position.z + velocityB.linear.z * hitTime);
 
-                    dt,
-                    hitTime))
-            {
-                continue;
-            }
-
-            // Find where both centers will be at impact.
-            cg::Point3 hitA(
-                transformA.position.x + velocityA.linear.x * hitTime,
-                transformA.position.y + velocityA.linear.y * hitTime,
-                transformA.position.z + velocityA.linear.z * hitTime
-            );
-
-            cg::Point3 hitB(
-                transformB.position.x + velocityB.linear.x * hitTime,
-                transformB.position.y + velocityB.linear.y * hitTime,
-                transformB.position.z + velocityB.linear.z * hitTime
-            );
-
-            // Contact normal from B toward A.
             cg::Vector3 normalBtoA(hitB, hitA);
 
-            if (normalBtoA.norm_squared() < EPS2)
-            {
-                continue;
-            }
+            if (normalBtoA.norm_squared() < EPS2) { continue; }
 
             normalBtoA.normalize();
 
-            // A reflects around +normal.
-            // B reflects around -normal.
             scheduleSphereCollision(pendingSphereCollisions, entityA, entityB, hitTime, normalBtoA);
             scheduleSphereCollision(pendingSphereCollisions, entityB, entityA, hitTime, normalBtoA * -1.0f);
         }
     }
+    const auto phase1End = std::chrono::steady_clock::now();
+    const auto phase2Start = std::chrono::steady_clock::now();
 
 
     // PHASE 2:
@@ -504,6 +445,23 @@ void CollisionSystem::update(Registry& registry, float dt)
                 remainingTime = 0.0f;
             }
         }
+    }
+    const auto phase2End = std::chrono::steady_clock::now();
+
+    const std::chrono::duration<double, std::milli> phase1Ms = phase1End - phase1Start;
+    const std::chrono::duration<double, std::milli> phase2Ms = phase2End - phase2Start;
+    const std::chrono::duration<double, std::milli> collisionMs = phase2End - collisionStart;
+
+    static int profileCounter = 0;
+
+    if (++profileCounter >= 60)
+    {
+        std::cout << "[COLLISION PROFILE]\n";
+        std::cout << "Phase 1: " << phase1Ms.count() << " ms\n";
+        std::cout << "Phase 2: " << phase2Ms.count() << " ms\n";
+        std::cout << "Total:   " << collisionMs.count() << " ms\n\n";
+
+        profileCounter = 0;
     }
     
     // DEFFERRED ENTITY DESTRUCTION

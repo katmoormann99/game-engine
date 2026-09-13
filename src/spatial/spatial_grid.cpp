@@ -54,8 +54,8 @@ namespace engine
         // floor() matters for negative coordinates
         return {
             static_cast<int>(std::floor(position.x/cellSize_)),
-            static_cast<int>(std::floor(position.x/cellSize_)),
-            static_cast<int>(std::floor(position.x/cellSize_))
+            static_cast<int>(std::floor(position.y/cellSize_)),
+            static_cast<int>(std::floor(position.z/cellSize_))
         };
 
     };
