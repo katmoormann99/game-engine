@@ -44,6 +44,8 @@ int main()
     // engine::Entity right_wall = factory.createStaticSurface(cg::Point3(50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, -90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.28f, 0.22f, 0.34f, 1.0f});
     // engine::Entity front_wall = factory.createStaticSurface(cg::Point3(0.0f, -50.0f, 50.0f),cg::Vector3(-90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.7f, 0.7f, 0.7f, 1.0f});
 
+    engine::Entity arenaBackdrop = factory.createStaticSurface(cg::Point3(0.0f, 45.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(90.0f, 90.0f, 1.0f), engine::Material{0.05f, 0.10f, 0.18f, 0.25f});
+
     engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 90.0f, 1.0f, 1.0f, 200.0f);
     
     engine::Entity light = factory.createLight(cg::Point3(0.0f, -100.0f, 50.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);

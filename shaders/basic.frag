@@ -4,6 +4,7 @@ in vec3 worldPosition;
 in vec3 worldNormal;
 
 uniform vec3 uMaterialColor;
+uniform float uMaterialAlpha;
 
 uniform vec3 uLightPosition;
 uniform vec3 uLightColor;
@@ -44,5 +45,5 @@ void main()
 
     vec3 finalColor = ambient + diffuseLight + flashlight;
     
-    fragColor = vec4(finalColor, 1.0);
+    fragColor = vec4(finalColor, uMaterialAlpha);
 }

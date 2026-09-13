@@ -191,6 +191,20 @@ namespace engine
 
         view_.set_identity();
 
+        if (!skybox_.initialize(
+        {
+            "../assets/skybox/right.jpg",
+            "../assets/skybox/left.jpg",
+            "../assets/skybox/top.jpg",
+            "../assets/skybox/bottom.jpg",
+            "../assets/skybox/front.jpg",
+            "../assets/skybox/back.jpg"
+        }))
+        {
+            std::cerr << "Failed to initialize skybox.\n";
+            return false;
+        }
+
         return true;
     }
 
@@ -612,15 +626,26 @@ namespace engine
         cg::Matrix4x4 normalMatrix = model.get_inverse().get_transpose();
         GLint normalMatrixLocation = glGetUniformLocation(shaderProgram_, "uNormalMatrix");
         glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, normalMatrix.get());
+
+        GLint alphaLocation = glGetUniformLocation(shaderProgram_, "uMaterialAlpha");
+        glUniform1f(alphaLocation, material.a);
         
         glBindVertexArray(mesh->vao);
         glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
     // Present the completed frame.
     void GraphicsBackend::endFrame()
     {
+        skybox_.draw(
+            view_.get(),
+            projection_.get()
+        );
+
         SDL_GL_SwapWindow(g_window);
     }
 
@@ -628,53 +653,16 @@ namespace engine
     // Release SDL/OpenGL resources.
     void GraphicsBackend::shutdown()
     {
-        if (unitSquareMesh_.ebo != 0)
-        {
-            glDeleteBuffers(1, &unitSquareMesh_.ebo);
-            unitSquareMesh_.ebo = 0;
-        }
+        // Clean up ordinary GPU resources...
+        // unit square
+        // target mesh
+        // shader program
 
-        if (unitSquareMesh_.vbo != 0)
-        {
-            glDeleteBuffers(1, &unitSquareMesh_.vbo);
-            unitSquareMesh_.vbo = 0;
-        }
+        // IMPORTANT:
+        // Skybox also owns OpenGL resources.
+        // Destroy these while the GL context still exists.
+        skybox_.shutdown();
 
-        if (unitSquareMesh_.vao != 0)
-        {
-            glDeleteVertexArrays(1, &unitSquareMesh_.vao);
-            unitSquareMesh_.vao = 0;
-        }
-
-        if (targetMesh_.ebo != 0)
-        {
-            glDeleteBuffers(
-                1,
-                &targetMesh_.ebo
-            );
-        }
-
-        if (targetMesh_.vbo != 0)
-        {
-            glDeleteBuffers(
-                1,
-                &targetMesh_.vbo
-            );
-        }
-
-        if (targetMesh_.vao != 0)
-        {
-            glDeleteVertexArrays(
-                1,
-                &targetMesh_.vao
-            );
-        }
-
-        if (shaderProgram_ != 0)
-        {
-            glDeleteProgram(shaderProgram_);
-            shaderProgram_ = 0;
-        }
         if (g_context != nullptr)
         {
             SDL_GL_DestroyContext(g_context);
@@ -689,5 +677,4 @@ namespace engine
 
         SDL_Quit();
     }
-
 } // namespace engine
