@@ -41,6 +41,9 @@
 #include <vector>
 #include <utility>
 
+#include <iostream>
+#include <typeinfo>
+
 namespace engine {
 
 
@@ -83,6 +86,8 @@ namespace engine {
                 if (it != entityToIndex_.end()){
                     // adding a component to an entity that already has one replaces the old component
                     components_[it->second] = component;
+
+                    std::cout << "[STORAGE] Entity" << entity << " replaced component " << typeid(T).name() << " at index " << it->second << std::endl;
                     return;
                 }
 
@@ -97,6 +102,7 @@ namespace engine {
 
                 // store the lookup entity -> 4
                 entityToIndex_[entity] = index;
+                std::cout << "[STORAGE] Entity" << entity << " -> " << typeid(T).name() << " storage[index " << index << "]" << std::endl;
             }
 
             bool has(Entity entity) const

@@ -193,12 +193,12 @@ namespace engine
 
         if (!skybox_.initialize(
         {
-            "../assets/skybox/right.jpg",
-            "../assets/skybox/left.jpg",
-            "../assets/skybox/top.jpg",
-            "../assets/skybox/bottom.jpg",
-            "../assets/skybox/front.jpg",
-            "../assets/skybox/back.jpg"
+            "../assets/skybox/galaxy_3_v1.jpg",
+            "../assets/skybox/galaxy_3_v1.jpg",
+            "../assets/skybox/galaxy_3_v1.jpg",
+            "../assets/skybox/galaxy_3_v1.jpg",
+            "../assets/skybox/galaxy_3_v1.jpg",
+            "../assets/skybox/galaxy_3_v1.jpg"
         }))
         {
             std::cerr << "Failed to initialize skybox.\n";
@@ -559,6 +559,14 @@ namespace engine
         );
     }
 
+
+    void GraphicsBackend::drawSkybox()
+    {
+        skybox_.draw(
+            view_.get(),
+            projection_.get()
+        );
+    }
 
     // Draw one ECS entity.
     //

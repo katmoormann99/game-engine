@@ -42,6 +42,8 @@ public:
         const Material& material
     );
 
+    void drawSkybox();
+
     void setCamera(
         const Transform& transform,
         const Camera& camera

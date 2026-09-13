@@ -15,7 +15,7 @@ void main()
     textureDirection = vec3(
         position.x,
         position.z,
-        -position.y
+        position.y
     );
 
     mat4 rotationOnlyView = mat4(mat3(uView));

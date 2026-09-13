@@ -35,31 +35,46 @@ void RenderSystem::render(const Registry& registry, GraphicsBackend &graphics) c
         {
             continue;
         }
+        
+        if (firstRender_)
+        {
+            std::cout
+                << "[RENDER] Using Light Entity "
+                << lightEntity << '\n';
+        }
+
         graphics.setLight(transforms.get(lightEntity), light);
         break;
     }
 
     // Go through every entity that has a Camera component 
     const auto& cameras = registry.cameras();
+
     for (Entity cameraEntity : cameras.entities())
     {
-        if (!transforms.has(cameraEntity)){
-            continue;
-        }
         // If this camera entity does NOT have a Transform SKIP IT
         // Transform is necessary data for the placement of the camera 
+        if (!transforms.has(cameraEntity)) {continue;}
+
         const Camera& camera = cameras.get(cameraEntity);
 
-        if (!camera.active)
+        if (!camera.active) {continue;}
+        if (firstRender_)
         {
-            continue;
+            std::cout
+                << "[RENDER] Using Camera Entity "
+                << cameraEntity << '\n';
         }
-        graphics.setCamera(transforms.get(cameraEntity), camera);
+
+        graphics.setCamera(
+            transforms.get(cameraEntity), 
+            camera
+        );
+        graphics.drawSkybox();
     }
 
     const auto& renderables = registry.renderables();
     const auto& materials = registry.materials();
-
     const auto& entities = renderables.entities();
 
     for (Entity entity : entities)
@@ -73,12 +88,24 @@ void RenderSystem::render(const Registry& registry, GraphicsBackend &graphics) c
         const Transform& transform = transforms.get(entity);
         const Material& material = materials.get(entity);
 
+        if (firstRender_)
+        {
+            std::cout << "[RENDER] Drawing Entity " << entity << " | MeshId " << static_cast<int>(renderable.meshId) << '\n';
+        }
+
         graphics.drawMesh(
             renderables.get(entity).meshId,
             transforms.get(entity),
             materials.get(entity)
         );
+
+        
     }
-}
+    if (firstRender_)
+        {
+            std::cout << "[RENDER] Render traversal complete\n";
+            firstRender_ = false;
+        }
+    }
 
 }

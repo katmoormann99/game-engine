@@ -514,6 +514,7 @@ void CollisionSystem::update(Registry& registry, float dt)
             }
         }
     }
+    
     // DEFFERRED ENTITY DESTRUCTION
     // Collision processing is NOW finished, so it is safe to modifiy the component storages
     for (Entity entity : entitiesToDestroy)

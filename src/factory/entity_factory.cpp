@@ -38,6 +38,7 @@ namespace engine
     Entity EntityFactory::createTarget(const cg::Point3 &position, const cg::Vector3 &velocity, double lifetime)
     {
         Entity entity = registry_.create();
+        std::cout << "\n[FACTORY] Creating Target | Entity " << entity << std::endl;
         registry_.transforms().add(entity, Transform{position, cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(0.03f, 0.03f, 0.03f)});
         registry_.velocities().add(entity, Velocity{velocity});
         registry_.renderables().add(entity, Renderable{MeshId::Target});
@@ -53,6 +54,7 @@ namespace engine
     Entity EntityFactory::createStaticSurface(const cg::Point3& position, const cg::Vector3& rotation, const cg::Vector3& scale, const Material& material)
     {
         Entity entity = registry_.create();
+        std::cout << "\n[FACTORY] Creating createStaticSurface | Entity " << entity << std::endl;
         
         registry_.transforms().add(entity, Transform{position, rotation, scale});
         registry_.renderables().add(entity, Renderable{MeshId::UnitSquare});
@@ -64,6 +66,7 @@ namespace engine
     Entity EntityFactory::createCamera(const cg::Point3& position, const cg::Vector3& rotation, float fovDegrees, float aspectRatio, float nearPlane, float farPlane)
     {
         Entity entity = registry_.create();
+        std::cout << "\n[FACTORY] Creating createCamera | Entity " << entity << std::endl;
 
         registry_.transforms().add(entity, Transform{position, rotation,cg::Vector3(1.0f, 1.0f, 1.0f)});
         registry_.cameras().add(entity, Camera{fovDegrees, aspectRatio, nearPlane, farPlane, true});
@@ -74,6 +77,7 @@ namespace engine
     Entity EntityFactory::createLight(const cg::Point3& position, const cg::Vector3& color, float intensity, float innerCutoffDegrees, float outerCutoffDegrees)
     {
         Entity entity = registry_.create();
+        std::cout << "\n[FACTORY] Creating createLight | Entity " << entity << std::endl;
 
         registry_.transforms().add(entity, Transform{position,cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(1.0f, 1.0f, 1.0f)});
         registry_.lights().add(entity, Light{color, intensity, cg::Vector3(0.0f, 1.0f, 0.0f), innerCutoffDegrees, outerCutoffDegrees, true});
@@ -84,6 +88,7 @@ namespace engine
     Entity EntityFactory::createWeapon(const cg::Point3& position, float projectileSpeed, float cooldownSeconds)
     {
         Entity entity = registry_.create();
+        std::cout << "\n[FACTORY] Creating createWeapon | Entity " << entity << std::endl;
 
         registry_.transforms().add(entity, Transform{position, cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(1.0f, 1.0f, 1.0f)});
         registry_.weapons().add(entity, Weapon{projectileSpeed, cooldownSeconds, 0.0f});
@@ -94,6 +99,7 @@ namespace engine
     Entity EntityFactory::createProjectile(Entity owner, const cg::Point3& position, const cg::Vector3& velocity, float damage, double lifetime)
     {
         Entity entity = registry_.create();
+        std::cout << "\n[FACTORY] Creating createProjectile | Entity " << entity << std::endl;
 
         registry_.transforms().add(entity, Transform{position, cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(0.25f, 1.5f, 0.25f)});
 

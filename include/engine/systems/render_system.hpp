@@ -18,6 +18,9 @@ class RenderSystem
 {
 public:
     void render(const Registry& registry, GraphicsBackend& graphics) const;
+
+private: 
+    mutable bool firstRender_ = true; // debugging purposes
 };
 
 } // namespace engine
