@@ -33,22 +33,22 @@ int main()
 
     engine::Entity sensorEntity = factory.createSensor(cg::Point3(0.0f, 0.0f, 0.0f), 25.0f);
 
-    engine::Entity target1 = factory.createTarget(cg::Point3(-25.0f, 0.0f, 30.0f), cg::Vector3(15.0f, 0.0f, 0.0f), 60.0);
+    engine::Entity target1 = factory.createTarget( cg::Point3(0.0f, 0.0f, 30.0f), cg::Vector3(0.0f, 0.0f, 0.0f), 60.0);
     engine::Entity target2 = factory.createTarget(cg::Point3(25.0f, 0.0f, 30.0f), cg::Vector3(-15.0f, 0.0f, 0.0f), 60.0);
     engine::Entity target3 = factory.createTarget(cg::Point3(0.0f, 20.0f, 40.0f), cg::Vector3(0.0f, -12.0f, -4.0f), 60.0);
 
-    engine::Entity floor = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 0.0f), cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.22f, 0.20f, 0.18f, 1.0f});
-    engine::Entity ceiling = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 100.0f),cg::Vector3(180.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.20f, 0.25f, 0.34f, 1.0f});
-    engine::Entity back_wall = factory.createStaticSurface(cg::Point3(0.0f, 50.0f, 50.0f),cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.34f, 0.22f, 0.25f, 1.0f});
-    engine::Entity left_wall = factory.createStaticSurface(cg::Point3(-50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, 90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.20f, 0.31f, 0.26f, 1.0f});
-    engine::Entity right_wall = factory.createStaticSurface(cg::Point3(50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, -90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.28f, 0.22f, 0.34f, 1.0f});
+    // engine::Entity floor = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 0.0f), cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.22f, 0.20f, 0.18f, 1.0f});
+    // engine::Entity ceiling = factory.createStaticSurface(cg::Point3(0.0f, 0.0f, 100.0f),cg::Vector3(180.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.20f, 0.25f, 0.34f, 1.0f});
+    // engine::Entity back_wall = factory.createStaticSurface(cg::Point3(0.0f, 50.0f, 50.0f),cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.34f, 0.22f, 0.25f, 1.0f});
+    // engine::Entity left_wall = factory.createStaticSurface(cg::Point3(-50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, 90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.20f, 0.31f, 0.26f, 1.0f});
+    // engine::Entity right_wall = factory.createStaticSurface(cg::Point3(50.0f, 0.0f, 50.0f),cg::Vector3(0.0f, -90.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.28f, 0.22f, 0.34f, 1.0f});
     // engine::Entity front_wall = factory.createStaticSurface(cg::Point3(0.0f, -50.0f, 50.0f),cg::Vector3(-90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), engine::Material{0.7f, 0.7f, 0.7f, 1.0f});
 
-    engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 70.0f, 1.0f, 1.0f, 200.0f);
+    engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 90.0f, 1.0f, 1.0f, 200.0f);
     
     engine::Entity light = factory.createLight(cg::Point3(0.0f, -100.0f, 50.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);
 
-    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -88.0f, 50.0f), 80.0f, 0.25f);
+    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -88.0f, 30.0f), 80.0f, 0.25f);
 
     bool running = true;
 

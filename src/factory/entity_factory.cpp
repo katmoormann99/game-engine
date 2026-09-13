@@ -17,6 +17,8 @@
 #include "engine/components/sphere_collider.hpp"
 #include "engine/components/camera.hpp"
 #include "engine/components/light.hpp"
+#include "engine/components/target.hpp"
+
 
 namespace engine 
 {
@@ -36,20 +38,15 @@ namespace engine
     Entity EntityFactory::createTarget(const cg::Point3 &position, const cg::Vector3 &velocity, double lifetime)
     {
         Entity entity = registry_.create();
-        registry_.transforms().add(
-            entity,
-            Transform{
-                position,
-                cg::Vector3(0.0f, 0.0f, 0.0f),
-                cg::Vector3(0.03f, 0.03f, 0.03f)
-            }
-        );
+        registry_.transforms().add(entity, Transform{position, cg::Vector3(0.0f, 0.0f, 0.0f), cg::Vector3(0.03f, 0.03f, 0.03f)});
         registry_.velocities().add(entity, Velocity{velocity});
         registry_.renderables().add(entity, Renderable{MeshId::Target});
         registry_.lifetimes().add(entity, Lifetime{lifetime});
         registry_.materials().add(entity, Material{1.0f, 0.3f, 0.2f, 1.0f});
         registry_.sphereColliders().add(entity, SphereCollider{2.0f});
 
+        // Gameplay identity: this entity is explicitly a target
+        registry_.targets().add(entity, Target{});
         return entity;
     }
 

@@ -21,6 +21,7 @@
 #include "../components/light.hpp"
 #include "../components/weapon.hpp"
 #include "../components/projectile.hpp"
+#include "../components/target.hpp"
 
 namespace engine
 {
@@ -44,6 +45,7 @@ public:
         lights_.remove(entity);
         weapons_.remove(entity);
         projectiles_.remove(entity);
+        targets_.remove(entity);
     }
 
     ComponentStorage<Transform>& transforms() {return transforms_;}
@@ -76,6 +78,9 @@ public:
     ComponentStorage<Projectile>& projectiles() {return projectiles_;}
     const ComponentStorage<Projectile>& projectiles() const {return projectiles_;}
 
+    ComponentStorage<Target>& targets() {return targets_;}
+    const ComponentStorage<Target>& targets() const {return targets_;}
+
 private:
     Entity nextEntity_ = 1;
 
@@ -93,6 +98,8 @@ private:
 
     ComponentStorage<Weapon> weapons_;
     ComponentStorage<Projectile> projectiles_;
+
+    ComponentStorage<Target> targets_;
 };
 
 }

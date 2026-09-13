@@ -30,6 +30,8 @@ add_executable(
 
     src/rendering/graphics_backend.cpp
     src/rendering/obj_loader.cpp
+    src/rendering/skybox.cpp
+    src/rendering/stb_image.cpp
 
     src/factory/entity_factory.cpp
 
@@ -84,10 +86,21 @@ add_custom_command(
         ${SHADER_SOURCE_DIR}/basic.frag
         ${SHADER_BINARY_DIR}/basic.frag
 
+    COMMAND
+    ${CMAKE_COMMAND} -E copy_if_different
+    ${SHADER_SOURCE_DIR}/skybox.vert
+    ${SHADER_BINARY_DIR}/skybox.vert
+
+    COMMAND
+        ${CMAKE_COMMAND} -E copy_if_different
+        ${SHADER_SOURCE_DIR}/skybox.frag
+        ${SHADER_BINARY_DIR}/skybox.frag
+
     DEPENDS
         ${SHADER_SOURCE_DIR}/basic.vert
         ${SHADER_SOURCE_DIR}/basic.frag
-
+        ${SHADER_SOURCE_DIR}/skybox.vert
+        ${SHADER_SOURCE_DIR}/skybox.frag
     COMMENT "Updating shaders"
 )
 

@@ -214,6 +214,14 @@ void CollisionSystem::update(Registry& registry, float dt)
     // So collision responses queue destruction UNTILL all collision process for this timestep has finished
     std::vector<Entity> entitiesToDestroy;
     
+
+    // Create a function called queueDestroy that can access and modify entitiesToDestroy. Give 
+    // it an entity. If that entity is NOT already in entities to destroy, add it to the end of the list
+
+    // So for example, queueDestroy(projectile) means "mark the projectile to be detroyed later, unless it is already marked"
+    
+    // == entitiesToDestroy.end() MEANS I did NOT find it
+    // Lambda function = [capture][parameter]
     auto queueDestroy = [&entitiesToDestroy](Entity entity)
     {
         if (std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), entity) == entitiesToDestroy.end())
@@ -222,13 +230,14 @@ void CollisionSystem::update(Registry& registry, float dt)
         }
     };
 
+    // Give this function an entity, search the entitiesToDestroy list, and return TRUE if the entity is in the list; otherwise return false
+    // If tihs entity is already queued to be destroyed, skip it
+
+    // != entitiesToDestory.ends() MEANS I DID find it
+    // Lambda function = [capture][parameter]
     auto isQueuedForDestroy = [&entitiesToDestroy](Entity entity)
     {
-        return std::find(
-            entitiesToDestroy.begin(),
-            entitiesToDestroy.end(),
-            entity
-        ) != entitiesToDestroy.end();
+        return std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), entity) != entitiesToDestroy.end();
     };
 
     // PHASE 1: Find sphere-sphere collision events for this fixed timestep.
@@ -320,41 +329,23 @@ void CollisionSystem::update(Registry& registry, float dt)
                 continue;
             }
 
-
             // Find where both centers will be at impact.
             cg::Point3 hitA(
-                transformA.position.x +
-                    velocityA.linear.x * hitTime,
-
-                transformA.position.y +
-                    velocityA.linear.y * hitTime,
-
-                transformA.position.z +
-                    velocityA.linear.z * hitTime
+                transformA.position.x + velocityA.linear.x * hitTime,
+                transformA.position.y + velocityA.linear.y * hitTime,
+                transformA.position.z + velocityA.linear.z * hitTime
             );
-
 
             cg::Point3 hitB(
-                transformB.position.x +
-                    velocityB.linear.x * hitTime,
-
-                transformB.position.y +
-                    velocityB.linear.y * hitTime,
-
-                transformB.position.z +
-                    velocityB.linear.z * hitTime
+                transformB.position.x + velocityB.linear.x * hitTime,
+                transformB.position.y + velocityB.linear.y * hitTime,
+                transformB.position.z + velocityB.linear.z * hitTime
             );
-
 
             // Contact normal from B toward A.
-            cg::Vector3 normalBtoA(
-                hitB,
-                hitA
-            );
+            cg::Vector3 normalBtoA(hitB, hitA);
 
-
-            if (normalBtoA.norm_squared() <
-                EPS2)
+            if (normalBtoA.norm_squared() < EPS2)
             {
                 continue;
             }
@@ -478,15 +469,12 @@ void CollisionSystem::update(Registry& registry, float dt)
                     break;
                 }
 
-                // A scheduled sphere collision should only happen once during this step 
-                if (bestKind == CollisionKind::Sphere && registry.projectiles().has(entity))
+                // If the collision was with another sphere AND the current entity is a projectile AND 
+                // the other entity that it hit is a target, then destroy both
+                if (bestKind == CollisionKind::Sphere && registry.projectiles().has(entity) && registry.targets().has(bestOtherEntity))
                 {
                     queueDestroy(entity);
-
-                    if(bestOtherEntity != 0)
-                    {
-                        queueDestroy(bestOtherEntity);
-                    }
+                    queueDestroy(bestOtherEntity);
 
                     // stop processing the movement of this particle 
                     remainingTime = 0.0f;

@@ -13,6 +13,7 @@
 #include "engine/components/camera.hpp"
 #include "engine/components/light.hpp"
 #include "engine/components/renderable.hpp"
+#include "engine/rendering/skybox.hpp"
 
 #include "engine/rendering/mesh.hpp"
 #include "geometry/matrix.hpp"
@@ -69,6 +70,8 @@ private:
     cg::Matrix4x4 projection_;
 
     bool firePressed_ = false;
+
+    Skybox skybox_;
 };
 
 } // namespace engine
