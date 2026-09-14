@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <vector>
 #include <algorithm>
-
+#include <thread>
 namespace engine
 {
 
@@ -33,6 +33,23 @@ struct CollisionPlane
 {
     cg::Vector3 normal;
     float d;
+};
+
+struct CollisionPair
+{
+    Entity a = 0;
+    Entity b = 0;
+};
+
+struct CollisionResult 
+{
+    Entity a = 0;
+    Entity b = 0;
+    bool overlapping = false;
+    bool hasCollision = false;
+    float hitTime = 0.0f;
+    cg::Vector3 normal{0.0f, 0.0f, 0.0f};
+
 };
 
 // x = -50 to +50
@@ -211,86 +228,144 @@ void CollisionSystem::update(Registry& registry, float dt)
         return std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), entity) != entitiesToDestroy.end();
     };
 
-    // PHASE 1: Find sphere-sphere collision events for this fixed timestep.
+    // PHASE 1: Find sphere-sphere collision events.
     std::unordered_map<Entity, PendingSphereCollision> pendingSphereCollisions;
+    std::vector<CollisionPair> candidatePairs;
 
-    // Rebuild the spatial grid from current collider positions.
     spatialGrid_.clear();
     const auto phase1Start = std::chrono::steady_clock::now();
 
+    // Rebuild spatial grid.
     for (Entity entity : entities)
     {
-        if (!transforms.has(entity)) { continue; }
-        spatialGrid_.insert(entity, transforms.get(entity).position);
+        if (transforms.has(entity)) { spatialGrid_.insert(entity, transforms.get(entity).position); }
     }
 
-    // Check only nearby collision candidates.
+    // Build candidate pairs.
     for (Entity entityA : entities)
     {
         if (!transforms.has(entityA) || !velocities.has(entityA)) { continue; }
 
-        Transform& transformA = transforms.get(entityA);
-        Velocity& velocityA = velocities.get(entityA);
+        const Transform& transformA = transforms.get(entityA);
+        const Velocity& velocityA = velocities.get(entityA);
         const SphereCollider& colliderA = colliders.get(entityA);
 
         const float movementDistance = velocityA.linear.norm() * dt;
         const float searchRadius = colliderA.radius * 2.0f + movementDistance;
-
-        std::vector<Entity> nearby = spatialGrid_.queryNearby(transformA.position, searchRadius);
+        const std::vector<Entity> nearby = spatialGrid_.queryNearby(transformA.position, searchRadius);
 
         for (Entity entityB : nearby)
         {
             if (entityB <= entityA) { continue; }
             if (!transforms.has(entityB) || !velocities.has(entityB) || !colliders.has(entityB)) { continue; }
 
-            Transform& transformB = transforms.get(entityB);
-            Velocity& velocityB = velocities.get(entityB);
-            const SphereCollider& colliderB = colliders.get(entityB);
+            candidatePairs.push_back({entityA, entityB});
+        }
+    }
 
-            cg::Vector3 AB(transformA.position, transformB.position);
+    // Parallel narrow phase.
+    // const unsigned int workerCount = 1;
+    const unsigned int workerCount = 4;
+    // const unsigned int workerCount = 8;
+    // const unsigned int workerCount = 14;
 
-            const float minimumDistance = colliderA.radius + colliderB.radius;
-            const float distanceSquared = AB.norm_squared();
+    const std::size_t chunkSize = (candidatePairs.size() + workerCount - 1) / workerCount;
 
-            // Already overlapping.
-            if (distanceSquared < minimumDistance * minimumDistance)
+    std::vector<std::thread> workers;
+    std::vector<std::vector<CollisionResult>> workerResults(workerCount);
+
+    for (unsigned int workerIndex = 0; workerIndex < workerCount; ++workerIndex)
+    {
+        const std::size_t begin = workerIndex * chunkSize;
+        const std::size_t end = std::min(begin + chunkSize, candidatePairs.size());
+
+        if (begin >= end) { break; }
+
+        workers.emplace_back([&, workerIndex, begin, end]()
+        {
+            auto& results = workerResults[workerIndex];
+
+            for (std::size_t i = begin; i < end; ++i)
             {
-                if (distanceSquared > EPS2)
+                const CollisionPair& pair = candidatePairs[i];
+
+                const Transform& transformA = transforms.get(pair.a);
+                const Transform& transformB = transforms.get(pair.b);
+                const Velocity& velocityA = velocities.get(pair.a);
+                const Velocity& velocityB = velocities.get(pair.b);
+                const SphereCollider& colliderA = colliders.get(pair.a);
+                const SphereCollider& colliderB = colliders.get(pair.b);
+
+                cg::Vector3 AB(transformA.position, transformB.position);
+
+                const float minimumDistance = colliderA.radius + colliderB.radius;
+                const float distanceSquared = AB.norm_squared();
+
+                if (distanceSquared < minimumDistance * minimumDistance)
                 {
-                    cg::Vector3 normal = AB;
-                    normal.normalize();
+                    if (distanceSquared > EPS2)
+                    {
+                        AB.normalize();
+                        results.push_back({pair.a, pair.b, true, false, 0.0f, AB});
+                    }
 
-                    velocityA.linear = velocityA.linear.reflect(normal);
-                    velocityB.linear = velocityB.linear.reflect(normal * -1.0f);
-
-                    transformA.position = cg::Point3(transformA.position.x - normal.x * NUDGE, transformA.position.y - normal.y * NUDGE, transformA.position.z - normal.z * NUDGE);
-                    transformB.position = cg::Point3(transformB.position.x + normal.x * NUDGE, transformB.position.y + normal.y * NUDGE, transformB.position.z + normal.z * NUDGE);
+                    continue;
                 }
+
+                float hitTime = 0.0f;
+
+                if (!sphereSphereTimeOfImpact(transformA.position, velocityA.linear, colliderA.radius, transformB.position, velocityB.linear, colliderB.radius, dt, hitTime)) { continue; }
+
+                const cg::Point3 hitA(transformA.position.x + velocityA.linear.x * hitTime, transformA.position.y + velocityA.linear.y * hitTime, transformA.position.z + velocityA.linear.z * hitTime);
+                const cg::Point3 hitB(transformB.position.x + velocityB.linear.x * hitTime, transformB.position.y + velocityB.linear.y * hitTime, transformB.position.z + velocityB.linear.z * hitTime);
+
+                cg::Vector3 normalBtoA(hitB, hitA);
+
+                if (normalBtoA.norm_squared() < EPS2) { continue; }
+
+                normalBtoA.normalize();
+                results.push_back({pair.a, pair.b, false, true, hitTime, normalBtoA});
+            }
+        });
+    }
+
+    // Wait for all workers.
+    for (std::thread& worker : workers) { worker.join(); }
+
+    // Apply results on main thread.
+    for (const auto& results : workerResults)
+    {
+        for (const CollisionResult& result : results)
+        {
+            if (!transforms.has(result.a) || !transforms.has(result.b)) { continue; }
+            if (!velocities.has(result.a) || !velocities.has(result.b)) { continue; }
+
+            Transform& transformA = transforms.get(result.a);
+            Transform& transformB = transforms.get(result.b);
+            Velocity& velocityA = velocities.get(result.a);
+            Velocity& velocityB = velocities.get(result.b);
+
+            if (result.overlapping)
+            {
+                velocityA.linear = velocityA.linear.reflect(result.normal);
+                velocityB.linear = velocityB.linear.reflect(result.normal * -1.0f);
+
+                transformA.position = cg::Point3(transformA.position.x - result.normal.x * NUDGE, transformA.position.y - result.normal.y * NUDGE, transformA.position.z - result.normal.z * NUDGE);
+                transformB.position = cg::Point3(transformB.position.x + result.normal.x * NUDGE, transformB.position.y + result.normal.y * NUDGE, transformB.position.z + result.normal.z * NUDGE);
 
                 continue;
             }
 
-            // Continuous sphere-sphere collision.
-            float hitTime = 0.0f;
-
-            if (!sphereSphereTimeOfImpact(transformA.position, velocityA.linear, colliderA.radius, transformB.position, velocityB.linear, colliderB.radius, dt, hitTime)) { continue; }
-
-            cg::Point3 hitA(transformA.position.x + velocityA.linear.x * hitTime, transformA.position.y + velocityA.linear.y * hitTime, transformA.position.z + velocityA.linear.z * hitTime);
-            cg::Point3 hitB(transformB.position.x + velocityB.linear.x * hitTime, transformB.position.y + velocityB.linear.y * hitTime, transformB.position.z + velocityB.linear.z * hitTime);
-
-            cg::Vector3 normalBtoA(hitB, hitA);
-
-            if (normalBtoA.norm_squared() < EPS2) { continue; }
-
-            normalBtoA.normalize();
-
-            scheduleSphereCollision(pendingSphereCollisions, entityA, entityB, hitTime, normalBtoA);
-            scheduleSphereCollision(pendingSphereCollisions, entityB, entityA, hitTime, normalBtoA * -1.0f);
+            if (result.hasCollision)
+            {
+                scheduleSphereCollision(pendingSphereCollisions, result.a, result.b, result.hitTime, result.normal);
+                scheduleSphereCollision(pendingSphereCollisions, result.b, result.a, result.hitTime, result.normal * -1.0f);
+            }
         }
     }
+
     const auto phase1End = std::chrono::steady_clock::now();
     const auto phase2Start = std::chrono::steady_clock::now();
-
 
     // PHASE 2:
     //
