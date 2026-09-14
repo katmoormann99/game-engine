@@ -1,48 +1,62 @@
-//============================================================================
-// Author: Kat Moormann
-// File: collision_system.hpp
-// Purpose: Performs continuous sphere-vs-room collision detection and
-//          response for moving ECS entities.
-// Date: July 10 2025
-//============================================================================
-
 #pragma once
 
 #include "engine/core/registry.hpp"
 #include "engine/spatial/spatial_grid.hpp"
+
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+#include <vector>
+
 namespace engine
 {
 
-/**
- * CollisionSystem performs continuous collision detection for moving
- * entities with:
- *
- *      Transform
- *      Velocity
- *      SphereCollider
- *
- * Rather than moving an object for the entire timestep and checking whether
- * it crossed a wall afterward, the system finds the earliest collision time.
- *
- * For each fixed timestep:
- *
- *      1. Find the earliest wall collision.
- *      2. Move exactly to the impact point.
- *      3. Reflect velocity around the wall normal.
- *      4. Nudge the object slightly away from the wall.
- *      5. Simulate the remaining time in the timestep.
- */
 class CollisionSystem
 {
 public:
-
-    explicit CollisionSystem(float cellSize) : spatialGrid_(cellSize) {}
+    explicit CollisionSystem(float cellSize, unsigned int workerCount = 8);
+    ~CollisionSystem();
 
     void update(Registry& registry, float dt);
 
-private: 
+private:
+    struct CollisionPair
+    {
+        Entity a = 0;
+        Entity b = 0;
+    };
+
+    struct CollisionResult
+    {
+        Entity a = 0;
+        Entity b = 0;
+        bool overlapping = false;
+        bool hasCollision = false;
+        float hitTime = 0.0f;
+        cg::Vector3 normal{0.0f, 0.0f, 0.0f};
+    };
+
+    void workerLoop(unsigned int workerIndex);
 
     SpatialGrid spatialGrid_;
+
+    unsigned int workerCount_ = 8;
+    std::vector<std::thread> workers_;
+
+    std::mutex workMutex_;
+    std::condition_variable workCv_;
+    std::condition_variable doneCv_;
+
+    bool stopWorkers_ = false;
+    
+    std::size_t workGeneration_ = 0;
+    std::size_t workersFinished_ = 0;
+
+    std::vector<CollisionPair> candidatePairs_;
+    std::vector<std::vector<CollisionResult>> workerResults_;
+
+    Registry* activeRegistry_ = nullptr;
+    float activeDt_ = 0.0f;
 };
 
 } // namespace engine

@@ -44,53 +44,31 @@ void SensorSystem::update(Registry& registry)
 
     for (Entity sensorEntity : sensorEntities)
     {
-        // A sensor needs a position in order to detect anything.
-        if (!transforms.has(sensorEntity))
-        {
-            continue;
-        }
+        if (!transforms.has(sensorEntity)) { continue; }
 
         const Transform& sensorTransform = transforms.get(sensorEntity);
-
         const Sensor& sensor = sensors.get(sensorEntity);
 
-        // Broad-phase query.
-        // These are only possible detections
-        // Give me all the entities in grid cells near this sensor's position, out to this sensor's detection radius
-        std::vector<Entity> candidates =
-            spatialGrid_.queryNearby(
-                sensorTransform.position,
-                sensor.detectionRadius
-            );
+        std::vector<Entity> nearby;
+        nearby.reserve(128);
 
+        spatialGrid_.queryNearby(sensorTransform.position, sensor.detectionRadius, nearby);
 
         std::vector<Entity>& detected = detections_[sensorEntity];
+        detected.clear();
 
-        // Step 3: Perform exact distance checks on the candidates.
         const float radiusSquared = sensor.detectionRadius * sensor.detectionRadius;
 
-        for (Entity candidate : candidates)
+        for (Entity candidate : nearby)
         {
-            // Do not detect yourself.
-            if (candidate == sensorEntity)
-            {
-                continue;
-            }
+            if (candidate == sensorEntity) { continue; }
+            if (!transforms.has(candidate)) { continue; }
 
-            if (!transforms.has(candidate))
-            {
-                continue;
-            }
+            const Transform& candidateTransform = transforms.get(candidate);
 
-            const Transform& targetTransform = transforms.get(candidate);
+            cg::Vector3 offset(sensorTransform.position, candidateTransform.position);
 
-            // Point3 - Point3 gives us a Vector3.
-            cg::Vector3 offset = targetTransform.position - sensorTransform.position;
-
-            // Avoid sqrt by comparing squared distances.
-            const float distanceSquared = offset.norm_squared();
-
-            if (distanceSquared <= radiusSquared)
+            if (offset.norm_squared() <= radiusSquared)
             {
                 detected.push_back(candidate);
             }

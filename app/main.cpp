@@ -23,8 +23,8 @@ int main()
 
     engine::RenderSystem renderSystem;
 
-    // 60 Hz simulation, 10-unit spatial grid cells
-    engine::Simulation simulation(1.0 / 60.0, 10.0f);
+    // 60 Hz simulation, 4.5-unit spatial grid cells
+    engine::Simulation simulation(1.0 / 60.0, 4.5f);
     std::cout << "[MAIN] Simulation Created! " << std::endl;
 
     engine::Registry& registry = simulation.registry();

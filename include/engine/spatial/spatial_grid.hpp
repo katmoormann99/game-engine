@@ -53,7 +53,7 @@ namespace engine
             void insert(Entity entity, const cg::Point3 &position);
 
             // Find entities stored in cells near a position
-            std::vector<Entity> queryNearby(const cg::Point3 &position, float radius) const;
+            void queryNearby(const cg::Point3& position, float radius, std::vector<Entity>& results) const; 
 
         private: 
             // Convert a world-space position into a grid cell coordinate

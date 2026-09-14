@@ -68,38 +68,31 @@ namespace engine
     }
 
 
-    std::vector<Entity> SpatialGrid::queryNearby(const cg::Point3& position,float radius) const
+    void SpatialGrid::queryNearby(
+        const cg::Point3& position,
+        float radius,
+        std::vector<Entity>& results
+    ) const
     {
-        std::vector<Entity> results;
+        results.clear();
 
         CellCoord center = positionToCell(position);
+        const int cellRadius = static_cast<int>(std::ceil(radius / cellSize_));
 
-        // Determine how many cells the search radius reaches.
-        int cellRadius = static_cast<int>(std::ceil(radius / cellSize_));
+        for (int x = center.x - cellRadius; x <= center.x + cellRadius; ++x)
+        {
+            for (int y = center.y - cellRadius; y <= center.y + cellRadius; ++y)
+            {
+                for (int z = center.z - cellRadius; z <= center.z + cellRadius; ++z)
+                {
+                    auto it = cells_.find(CellCoord{x, y, z});
 
-        // Search the neighboring cells.
-        for (int x = center.x - cellRadius; x <= center.x + cellRadius; ++x){
-            for (int y = center.y - cellRadius; y <= center.y + cellRadius; ++y){
-                for (int z = center.z - cellRadius; z <= center.z + cellRadius; ++z){
-                    CellCoord cell{x, y, z};
+                    if (it == cells_.end()) { continue; }
 
-                    auto it = cells_.find(cell);
-
-                    if (it == cells_.end())
-                    {
-                        continue;
-                    }
-
-                    // Add entities from this cell as possible candidates.
-                    for (Entity entity : it->second)
-                    {
-                        results.push_back(entity);
-                    }
+                    results.insert(results.end(), it->second.begin(), it->second.end());
                 }
             }
         }
-
-        return results;
-    };
+    }
 
 }

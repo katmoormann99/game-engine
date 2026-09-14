@@ -35,23 +35,6 @@ struct CollisionPlane
     float d;
 };
 
-struct CollisionPair
-{
-    Entity a = 0;
-    Entity b = 0;
-};
-
-struct CollisionResult 
-{
-    Entity a = 0;
-    Entity b = 0;
-    bool overlapping = false;
-    bool hasCollision = false;
-    float hitTime = 0.0f;
-    cg::Vector3 normal{0.0f, 0.0f, 0.0f};
-
-};
-
 // x = -50 to +50
 // y = -30 to +30
 // z =   0 to 100
@@ -177,6 +160,116 @@ bool sphereSphereTimeOfImpact(
 
 } // anonymous namespace
 
+CollisionSystem::CollisionSystem(float cellSize, unsigned int workerCount)
+    : spatialGrid_(cellSize),
+      workerCount_(workerCount)
+{
+    workerResults_.resize(workerCount_);
+    workers_.reserve(workerCount_);
+
+    for (unsigned int i = 0; i < workerCount_; ++i)
+    {
+        workers_.emplace_back(&CollisionSystem::workerLoop, this, i);
+    }
+}
+
+CollisionSystem::~CollisionSystem()
+{
+    {
+        std::lock_guard<std::mutex> lock(workMutex_);
+        stopWorkers_ = true;
+    }
+
+    workCv_.notify_all();
+
+    for (std::thread& worker : workers_)
+    {
+        if (worker.joinable()) { worker.join(); }
+    }
+}
+
+void CollisionSystem::workerLoop(unsigned int workerIndex)
+{
+    std::size_t lastGeneration = 0;
+
+    while (true)
+    {
+        std::unique_lock<std::mutex> lock(workMutex_);
+
+        workCv_.wait(lock, [this, lastGeneration]()
+        {
+            return stopWorkers_ || workGeneration_ > lastGeneration;
+        });
+
+        if (stopWorkers_) { return; }
+
+        lastGeneration = workGeneration_;
+
+        Registry& registry = *activeRegistry_;
+        const float dt = activeDt_;
+
+        auto& transforms = registry.transforms();
+        auto& velocities = registry.velocities();
+        auto& colliders = registry.sphereColliders();
+
+        const std::size_t chunkSize = (candidatePairs_.size() + workerCount_ - 1) / workerCount_;
+        const std::size_t begin = workerIndex * chunkSize;
+        const std::size_t end = std::min(begin + chunkSize, candidatePairs_.size());
+
+        auto& results = workerResults_[workerIndex];
+        results.clear();
+
+        lock.unlock();
+
+        for (std::size_t i = begin; i < end; ++i)
+        {
+            const CollisionPair& pair = candidatePairs_[i];
+
+            const Transform& transformA = transforms.get(pair.a);
+            const Transform& transformB = transforms.get(pair.b);
+            const Velocity& velocityA = velocities.get(pair.a);
+            const Velocity& velocityB = velocities.get(pair.b);
+            const SphereCollider& colliderA = colliders.get(pair.a);
+            const SphereCollider& colliderB = colliders.get(pair.b);
+
+            cg::Vector3 AB(transformA.position, transformB.position);
+
+            const float minimumDistance = colliderA.radius + colliderB.radius;
+            const float distanceSquared = AB.norm_squared();
+
+            if (distanceSquared < minimumDistance * minimumDistance)
+            {
+                if (distanceSquared > 1e-6f)
+                {
+                    AB.normalize();
+                    results.push_back({pair.a, pair.b, true, false, 0.0f, AB});
+                }
+
+                continue;
+            }
+
+            float hitTime = 0.0f;
+
+            if (!sphereSphereTimeOfImpact(transformA.position, velocityA.linear, colliderA.radius, transformB.position, velocityB.linear, colliderB.radius, dt, hitTime)) { continue; }
+
+            const cg::Point3 hitA(transformA.position.x + velocityA.linear.x * hitTime, transformA.position.y + velocityA.linear.y * hitTime, transformA.position.z + velocityA.linear.z * hitTime);
+            const cg::Point3 hitB(transformB.position.x + velocityB.linear.x * hitTime, transformB.position.y + velocityB.linear.y * hitTime, transformB.position.z + velocityB.linear.z * hitTime);
+
+            cg::Vector3 normalBtoA(hitB, hitA);
+
+            if (normalBtoA.norm_squared() < 1e-6f) { continue; }
+
+            normalBtoA.normalize();
+            results.push_back({pair.a, pair.b, false, true, hitTime, normalBtoA});
+        }
+
+        lock.lock();
+
+        ++workersFinished_;
+
+        if (workersFinished_ == workerCount_) { doneCv_.notify_one(); }
+    }
+}
 
 void CollisionSystem::update(Registry& registry, float dt)
 {
@@ -228,19 +321,32 @@ void CollisionSystem::update(Registry& registry, float dt)
         return std::find(entitiesToDestroy.begin(), entitiesToDestroy.end(), entity) != entitiesToDestroy.end();
     };
 
+
     // PHASE 1: Find sphere-sphere collision events.
     std::unordered_map<Entity, PendingSphereCollision> pendingSphereCollisions;
-    std::vector<CollisionPair> candidatePairs;
+
+    const auto broadPhaseStart = std::chrono::steady_clock::now();
 
     spatialGrid_.clear();
+    candidatePairs_.clear();
+
     const auto phase1Start = std::chrono::steady_clock::now();
 
-    // Rebuild spatial grid.
+    const auto gridBuildStart = std::chrono::steady_clock::now();
+
     for (Entity entity : entities)
     {
         if (transforms.has(entity)) { spatialGrid_.insert(entity, transforms.get(entity).position); }
     }
 
+    const auto gridBuildEnd = std::chrono::steady_clock::now();
+    const auto candidateStart = std::chrono::steady_clock::now();
+
+    std::vector<Entity> nearby;
+    nearby.reserve(128);
+
+    std::size_t totalNearbyCandidates = 0;
+    std::size_t totalCandidatePairs = 0;
     // Build candidate pairs.
     for (Entity entityA : entities)
     {
@@ -252,88 +358,54 @@ void CollisionSystem::update(Registry& registry, float dt)
 
         const float movementDistance = velocityA.linear.norm() * dt;
         const float searchRadius = colliderA.radius * 2.0f + movementDistance;
-        const std::vector<Entity> nearby = spatialGrid_.queryNearby(transformA.position, searchRadius);
+
+        spatialGrid_.queryNearby(transformA.position, searchRadius, nearby);
+
+        totalNearbyCandidates += nearby.size();
 
         for (Entity entityB : nearby)
         {
             if (entityB <= entityA) { continue; }
             if (!transforms.has(entityB) || !velocities.has(entityB) || !colliders.has(entityB)) { continue; }
 
-            candidatePairs.push_back({entityA, entityB});
+            candidatePairs_.push_back({entityA, entityB});
+            ++totalCandidatePairs;
         }
     }
 
-    // Parallel narrow phase.
-    // const unsigned int workerCount = 1;
-    const unsigned int workerCount = 4;
-    // const unsigned int workerCount = 8;
-    // const unsigned int workerCount = 14;
+    const auto candidateEnd = std::chrono::steady_clock::now();
+    const auto broadPhaseEnd = std::chrono::steady_clock::now();
+    const auto narrowPhaseStart = std::chrono::steady_clock::now();
 
-    const std::size_t chunkSize = (candidatePairs.size() + workerCount - 1) / workerCount;
+    // Clear previous worker results.
+    for (auto& results : workerResults_) { results.clear(); }
 
-    std::vector<std::thread> workers;
-    std::vector<std::vector<CollisionResult>> workerResults(workerCount);
-
-    for (unsigned int workerIndex = 0; workerIndex < workerCount; ++workerIndex)
+    // Give work to persistent workers.
     {
-        const std::size_t begin = workerIndex * chunkSize;
-        const std::size_t end = std::min(begin + chunkSize, candidatePairs.size());
+        std::lock_guard<std::mutex> lock(workMutex_);
 
-        if (begin >= end) { break; }
-
-        workers.emplace_back([&, workerIndex, begin, end]()
-        {
-            auto& results = workerResults[workerIndex];
-
-            for (std::size_t i = begin; i < end; ++i)
-            {
-                const CollisionPair& pair = candidatePairs[i];
-
-                const Transform& transformA = transforms.get(pair.a);
-                const Transform& transformB = transforms.get(pair.b);
-                const Velocity& velocityA = velocities.get(pair.a);
-                const Velocity& velocityB = velocities.get(pair.b);
-                const SphereCollider& colliderA = colliders.get(pair.a);
-                const SphereCollider& colliderB = colliders.get(pair.b);
-
-                cg::Vector3 AB(transformA.position, transformB.position);
-
-                const float minimumDistance = colliderA.radius + colliderB.radius;
-                const float distanceSquared = AB.norm_squared();
-
-                if (distanceSquared < minimumDistance * minimumDistance)
-                {
-                    if (distanceSquared > EPS2)
-                    {
-                        AB.normalize();
-                        results.push_back({pair.a, pair.b, true, false, 0.0f, AB});
-                    }
-
-                    continue;
-                }
-
-                float hitTime = 0.0f;
-
-                if (!sphereSphereTimeOfImpact(transformA.position, velocityA.linear, colliderA.radius, transformB.position, velocityB.linear, colliderB.radius, dt, hitTime)) { continue; }
-
-                const cg::Point3 hitA(transformA.position.x + velocityA.linear.x * hitTime, transformA.position.y + velocityA.linear.y * hitTime, transformA.position.z + velocityA.linear.z * hitTime);
-                const cg::Point3 hitB(transformB.position.x + velocityB.linear.x * hitTime, transformB.position.y + velocityB.linear.y * hitTime, transformB.position.z + velocityB.linear.z * hitTime);
-
-                cg::Vector3 normalBtoA(hitB, hitA);
-
-                if (normalBtoA.norm_squared() < EPS2) { continue; }
-
-                normalBtoA.normalize();
-                results.push_back({pair.a, pair.b, false, true, hitTime, normalBtoA});
-            }
-        });
+        activeRegistry_ = &registry;
+        activeDt_ = dt;
+        workersFinished_ = 0;
+        ++workGeneration_;
     }
 
-    // Wait for all workers.
-    for (std::thread& worker : workers) { worker.join(); }
+    workCv_.notify_all();
 
-    // Apply results on main thread.
-    for (const auto& results : workerResults)
+    // Wait for all workers.
+    {
+        std::unique_lock<std::mutex> lock(workMutex_);
+
+        doneCv_.wait(lock, [this]()
+        {
+            return workersFinished_ == workerCount_;
+        });
+    }
+    const auto narrowPhaseEnd = std::chrono::steady_clock::now();
+    const auto mergeStart = std::chrono::steady_clock::now();
+
+    // Apply worker results on the main thread.
+    for (const auto& results : workerResults_)
     {
         for (const CollisionResult& result : results)
         {
@@ -363,6 +435,8 @@ void CollisionSystem::update(Registry& registry, float dt)
             }
         }
     }
+    const auto mergeEnd = std::chrono::steady_clock::now();
+
 
     const auto phase1End = std::chrono::steady_clock::now();
     const auto phase2Start = std::chrono::steady_clock::now();
@@ -527,14 +601,30 @@ void CollisionSystem::update(Registry& registry, float dt)
     const std::chrono::duration<double, std::milli> phase2Ms = phase2End - phase2Start;
     const std::chrono::duration<double, std::milli> collisionMs = phase2End - collisionStart;
 
+    const std::chrono::duration<double, std::milli> broadPhaseMs = broadPhaseEnd - broadPhaseStart;
+    const std::chrono::duration<double, std::milli> narrowPhaseMs = narrowPhaseEnd - narrowPhaseStart;
+    const std::chrono::duration<double, std::milli> mergeMs = mergeEnd - mergeStart;
+    const std::chrono::duration<double, std::milli> gridBuildMs = gridBuildEnd - gridBuildStart;
+    const std::chrono::duration<double, std::milli> candidateMs = candidateEnd - candidateStart;
+
     static int profileCounter = 0;
 
     if (++profileCounter >= 60)
     {
-        std::cout << "[COLLISION PROFILE]\n";
-        std::cout << "Phase 1: " << phase1Ms.count() << " ms\n";
-        std::cout << "Phase 2: " << phase2Ms.count() << " ms\n";
-        std::cout << "Total:   " << collisionMs.count() << " ms\n\n";
+        std::cout << "\n[COLLISION PROFILE]\n";
+        std::cout << "Broad phase:  " << broadPhaseMs.count() << " ms\n";
+        std::cout << "Narrow phase: " << narrowPhaseMs.count() << " ms\n";
+        std::cout << "Merge:        " << mergeMs.count() << " ms\n";
+
+        std::cout << "\nGrid build:    " << gridBuildMs.count() << " ms\n";
+        std::cout << "Candidate gen: " << candidateMs.count() << " ms\n";
+
+        std::cout << "\nNearby returned: " << totalNearbyCandidates << '\n';
+        std::cout << "Candidate pairs: " << totalCandidatePairs << '\n';
+
+        std::cout << "\nPhase 1:      " << phase1Ms.count() << " ms\n";
+        std::cout << "Phase 2:      " << phase2Ms.count() << " ms\n";
+        std::cout << "Total:        " << collisionMs.count() << " ms\n\n";
 
         profileCounter = 0;
     }
