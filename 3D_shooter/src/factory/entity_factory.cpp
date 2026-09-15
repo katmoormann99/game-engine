@@ -47,7 +47,8 @@ namespace engine
         registry_.sphereColliders().add(entity, SphereCollider{2.0f});
 
         // Gameplay identity: this entity is explicitly a target
-        registry_.targets().add(entity, Target{});
+        std::string target_name = "Enemy";
+        registry_.targets().add(entity, Target{target_name});
         return entity;
     }
 
