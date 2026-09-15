@@ -1,3 +1,4 @@
+#include "engine/core/component_storage.hpp"
 namespace engine
 {
     class Registry
@@ -6,7 +7,7 @@ namespace engine
             Entity create()
             {
                 // generate and entity ID
-                return Entity{nextEntity_++}
+                return Entity{nextEntity_++};
             }
 
             void destroy(Entity entity){
@@ -14,6 +15,6 @@ namespace engine
             };
 
         private:
-        std::uint32_t nextEntity_ = 1;
+        Entity nextEntity_ = 1;
     };
 }

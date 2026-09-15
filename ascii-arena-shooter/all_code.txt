@@ -1,0 +1,406 @@
+
+===== include/engine/components/health.hpp =====
+
+
+===== include/engine/components/lifetime.hpp =====
+
+
+===== include/engine/components/position.hpp =====
+
+#include "../../../geometry/point3.hpp"
+namespace engine
+{
+    struct Position
+    {
+        cg::Point3 position{0.0f, 0.0f, 0.0f};
+    };
+}
+===== include/engine/components/projectile.hpp =====
+
+#include "engine/core/entity.hpp"
+namespace engine
+{
+    struct Projectile
+    {
+        Entity owner = 0;
+        float damage = 1.0f;
+    }
+}
+===== include/engine/components/target.hpp =====
+
+namespace engine
+{
+	struct Target
+	{
+		std::string name_;
+	};
+} // namespace engine
+
+
+
+===== include/engine/components/velocity.hpp =====
+
+#include "../../../geometry/vector3.hpp"
+namespace engine
+{
+    struct Velocity
+    {
+        cg::Vector3 linear; // sx, sy, sz
+    }
+}
+===== include/engine/components/weapon.hpp =====
+
+
+===== include/engine/core/component_storage.hpp =====
+
+#include "engine/core/entity.hpp"
+#include <vector>
+#include <unordered_map>
+#include <cstddef>
+
+// Think of ComponentStorage<T> as answering two kinds of questions
+// 1. Entity Focused - Does Entity 7 have a Position? Give me its Position.
+// 2. System Focused - Give me all Positions so I can process them efficiently 
+
+namespace engine {
+
+    template <typename T> 
+    class ComponentStorage{
+        public:
+            // Gives an entity a component of type T, or replaces the existing one
+            // registry_.transforms().add(entity, Transform{position});
+            void add(Entity entity, const T &component)
+            {
+                auto it = entityToIndex_.find(entity);
+
+                if (it != entityToIndex_.end())
+                {
+                    // replace the current entity component data 
+                    components_[it->second] = component;
+                    return;
+                }
+
+                const std::size_t = index = components_.size();
+            }
+
+            // Checks whether or not an entity has this component before trying to access it
+            // if (!transforms.has(entityA) || !velocities.has(entityA)) { continue; }
+            bool has(Entity entity const){
+                auto it = entityToIndex_.find(entity);
+                if (it != entityToIndex_.end())
+                {
+                    return true;
+                }
+                return false;
+            };
+
+            // Gets the component and allows the caller to modify it 
+            // MovementSystem getting a Transform so it can update x and y
+            // Transform &transform = transforms.get(entity);
+            // transform.position = transform.position + velocity.linear * static_cast<float>(dt);
+            T& get (Entity entity){
+                std::size_t index = entityToIndex_.at(entity);
+                T &component = components_.at(index);
+                return component;
+            };
+
+            // Gets the component for reading ONLY 
+            // A system that only needs to inspet data, like checking a target's position
+            // without changing it 
+            // const Transform& transformA = transforms.get(entityA);
+            // spatialGrid_.queryNearby(transformA.position, searchRadius, nearby);
+            const T& get(Entity entity){
+                std::size_t index = entityToIndex_.at(entity);
+                const T &component = components_.at(index);
+                return component;
+            };
+
+            // Gives mutable access to all components of this type 
+            // A system processing every Velocity, Position, etc, in a tight loop and modifying them
+            std::vector<T>& components()
+            {
+                return components_;
+            };
+
+            // Gives read-only access to all components of this type
+            // Profiling, rendering, debugging 
+            const std::vector<T>& components() const
+            {
+                return components_;
+            };
+
+            // Tells you which entity belongs to each element in components_
+            // const auto &entities = velocities.entities();
+            const std::vector<Entity>& entities() const
+            {
+                return entities_;
+            }
+
+            // Remove this entity's component of type T from this storage
+            void remove (Entity entity)
+            {
+                auto it = entityToIndex_.find(entity);
+
+                if (it == entityToIndex_.end())
+                {
+                    return;
+                }
+                const std:size_t removedIndex = it->second;
+                const std::size_t lastIndex = components_.size() - 1;
+
+                if (removedIndex != lastIndex)
+                {
+                    components_[removedIndex] = std::move(components_[lastIndex]);
+
+                    Entity movedEntity = entities_[lastIndex];
+                    entities_[removedIndex] = movedEntity;
+
+                    // The moved entity now lives at removedIndex
+                    entityToIndex_[movedEntity] = removedIndex;
+                }
+
+                components_.pop_back();
+                entities_.pop_back();
+                entityToIndex_.erase(it);
+            }
+
+        private:
+            std::vector<T> components_;
+            std::vector<Entity> entities_;
+            std::unordered_map<Entity, std::size_t> entityToIndex_;
+    };
+}
+===== include/engine/core/entity.hpp =====
+
+#include <cstdint>
+
+namespace engine
+{
+    struct Entity
+    {
+        std::uint32_t id = 0;
+    };
+    constexpr Entity INVALID_ENTITY = 0;
+}
+===== include/engine/core/registry.hpp =====
+
+#include "engine/core/component_storage.hpp"
+namespace engine
+{
+    class Registry
+    {
+        public:
+            Entity create()
+            {
+                // generate and entity ID
+                return Entity{nextEntity_++};
+            }
+
+            void destroy(Entity entity){
+                // implement later
+            };
+
+        private:
+        Entity nextEntity_ = 1;
+    };
+}
+===== include/engine/core/time.hpp =====
+
+#include <cstdint>
+namespace engine
+{
+    struct SimulationTime
+    {
+        double fixed_dt = 1.0/60.0; // 60Hz
+        double elapsed = 0.0;
+
+        std::uint64_t tick = 0;
+
+        void advance()
+        {
+            elapsed += fixed_dt;
+            ++tick;
+        }
+        
+
+
+    };
+}
+===== include/engine/factory/entity_factory.hpp =====
+
+ #include "engine/core/registry.hpp"
+ #include "geometry/point3.hpp"
+ #include "geometry/vector3.hpp"
+
+ namespace engine
+ {
+    public:
+        explicit EntityFactory(Registry &registry);
+
+    private:
+        Registry &registry_;
+
+ }
+===== include/engine/simulation/simulation.hpp =====
+
+#include "engine/core/registry.hpp"
+#include "engine/core/time.hpp"
+namespace engine
+{
+    Class Simulation
+    {
+        public:
+            explicit Simulation(double fixed_dt = 1.0/60.0);
+            Registry& registry();
+            const Registry& registry() const;
+
+            const SimulationTime& time() const;
+
+            void update(doublt frame_dt);
+
+            Entity fireWeapon(EntityFactory& factory, Entity weaponEntity, Entity owner, const cg::Point3& position, const cg::Vector3& direction);
+
+
+        private:
+            void step();
+
+            Registry registry_;
+            SimulationTime time_;
+
+            double accumulator_ = 0.0;
+    }
+}
+===== include/engine/systems/lifetime_system.hpp =====
+
+#include "engine/core/registry.hpp"
+
+namespace engine
+{
+    class LifetimeSystem
+    {
+        public:
+            void update(Registry &registry, double dt);
+    }
+}
+===== include/engine/systems/movement_system.hpp =====
+
+#include "engine/core/registry.hpp"
+
+namespace engine
+{
+    class MovementSystem
+    {
+        public:
+            void update(Registry &registry, double dt);
+    }
+}
+===== include/engine/systems/weapon_system.hpp =====
+
+#include "engine/core/registry.hpp"
+
+namespace engine
+{
+    class WeaponSystem
+    {
+        public:
+            void update(Registry &registry, double dt);
+    }
+}
+===== readMe =====
+
+```
++----------------------+
+|          E           |
+|                      |
+|      *               |
+|                      |
+|   P                  |
+|                 E    |
++----------------------+
+
+P = player
+E = enemy
+* = projectile
+```
+
+First a couple of things
+ENTITY = ID
+Component = Entity Data
+Systems = ACTS on ENTITY DATA 
+
+this will all be in 2D space using stationary objects
+
+Factory constructs/configures entities <---> Registry creates ENTITY IDs and OWNS COMPONENT STORAGE <------> Systems hold/use non-owning Registry references 
+
+THE REGISTRY OWNS ENTITY LIFECYCLE AND COMPONENT STORAGE.
+THE FACTORY ASKS THE REGISTRY TO CREATE AN ENTITY ID, THEN ATTACHES THE APPROPRIATE COMPONENTS TO THAT ID
+
+Generating component storage through a template class - ensuring type safety at compile time
+
+Okay so in this situation it looks like we have 4 entities 
+(1) target/enemy (2) projectile (3) weapon (4) player
+
+Components: (1) target (2) projectile (3) lifetime (4) transform/position (5) weapon (6) velocity (7) health
+
+Systems would include (1) movement (position, velocity) (2) lifetime (3) weapon system 
+
+Simulated step: 60Hz 
+
+In the entity factory:
+Target{target, lifetime, position}
+Project{projectile, lifetime, velocity, position}
+Weapon{weapon, position}
+Player{lifetime, position}
+
+
+Linking Entity ID to components 
+Example: 
+Target/Enemy uint32_t = ID1
+std::vector<Target> [ID1 target data, ]
+std::vector<Projectile> [ ]
+std::vector<Lifetime> [ ID1 lifetime data , ]
+std::vector<Position> [ ID1 position data ]
+std::vector<Weapon> [ ]
+std::vector<Velocity> [ ]
+std::vector<Health> [ ]
+
+
+Developing the Templated class 
+namespace engine {
+
+    template <typename T> 
+    class ComponentStorage{
+        public:
+
+        private:
+            std::vector<T> components_;
+            std::vector<Entity> entities_;
+            std::unordered_map<Entity, std::size_t> entityToIndex_;
+    };
+}
+
+Suppose we are working on ComponentStorage<Position> and the following entites have these positions:
+Entity 1 -> Position{2, 3}
+Entity 2 -> Position{8, 1}
+Entity 3 -> Position{5, 9}
+
+The three containers would then look like: 
+Component Data 
+components_ = {
+    Position{2, 3},  // index 0
+    Position{8, 1},  // index 1
+    Position{5, 9}   // index 2
+}
+
+entites_ = {
+    Entity{1},   // index 0
+    Entity{4},   // index 1
+    Entity{7}    // index 2
+};
+
+So the unordered map would conceptually look like: 
+entityToIndex_ = {
+    {Entity{1}, 0},
+    {Entity{4}, 1},
+    {Entity{7}, 2}
+};
