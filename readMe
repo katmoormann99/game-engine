@@ -1,0 +1,107 @@
+## Registry Class
+
+The `Registry` is the central owner and access point for the Entity Component System (ECS).
+
+Its main responsibilities are to:
+
+- create entity IDs,
+- own all component storage,
+- expose component storage to systems and factories,
+- remove an entity's components when that entity is destroyed.
+
+The Registry does **not** contain gameplay behavior or system logic.
+
+Instead, systems receive access to the Registry and use it to query or modify the component data they need.
+
+A simplified version of the class looks like this:
+
+```cpp
+class Registry
+{
+public:
+    Entity create()
+    {
+        return nextEntity_++;
+    }
+
+    void destroy(Entity entity)
+    {
+        transforms_.remove(entity);
+    }
+
+    ComponentStorage<Transform>& transforms()
+    {
+        return transforms_;
+    }
+
+    const ComponentStorage<Transform>& transforms() const
+    {
+        return transforms_;
+    }
+
+private:
+    Entity nextEntity_ = 1;
+
+    ComponentStorage<Transform> transforms_;
+};
+```
+
+### Typed Component Storage
+
+The Registry owns a separate component storage for each component type used by the engine.
+
+For example:
+
+```cpp
+ComponentStorage<Transform> transforms_;
+ComponentStorage<Velocity> velocities_;
+ComponentStorage<Lifetime> lifetimes_;
+```
+
+Each of these uses the same generic storage implementation:
+
+```cpp
+ComponentStorage<T>
+```
+
+The template parameter `T` determines which type of component that particular storage contains.
+
+For example:
+
+```cpp
+ComponentStorage<Transform>
+```
+
+stores `Transform` components, while:
+
+```cpp
+ComponentStorage<Velocity>
+```
+
+stores `Velocity` components.
+
+The Registry can therefore be thought of as a collection of typed component stores:
+
+```text
+                    Registry
+                       │
+       ┌───────────────┼─────────────────┐
+       │               │                 │
+       ▼               ▼                 ▼
+ComponentStorage  ComponentStorage  ComponentStorage
+   <Transform>       <Velocity>       <Renderable>
+       │               │                 │
+       ▼               ▼                 ▼
+ Transform data     Velocity data      Render data
+```
+
+Systems access these storages through the Registry rather than owning component data themselves.
+
+For example, the Movement System can request access to the component storages it needs:
+
+```cpp
+auto& transforms = registry.transforms();
+auto& velocities = registry.velocities();
+```
+
+This keeps component ownership centralized inside the Registry while allowing individual systems to operate only on the data they require.
