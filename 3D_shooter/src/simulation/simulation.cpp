@@ -77,6 +77,8 @@ namespace engine
     {
         const float fixedDt_ = static_cast<float>(time_.fixed_dt);
 
+        weaponSystem_.update(registry_, fixedDt_);
+
         const auto movementStart = std::chrono::steady_clock::now();
         movementSystem_.update(registry_, static_cast<float>(fixedDt_));
         const auto movementEnd = std::chrono::steady_clock::now();
@@ -127,15 +129,5 @@ namespace engine
         }
         time_.advance();
     }
-
-    // Owns all entities and their component storage
-    Registry registry_;
-
-    SimulationTime time_;
-    MovementSystem movementSystem_;
-
-    // Leftover real time waiting to become a full simulation step
-    double accumulator_ = 0.0;
-
     
 }

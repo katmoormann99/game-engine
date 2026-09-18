@@ -586,9 +586,31 @@ void CollisionSystem::update(Registry& registry, float dt)
                     continue;
                 }
 
+                // Distance between the outside of the sphere and the wall
+                // Positive = sphere is still inside the room
+                // Zero     = sphere is touching the wall
+                // Negative = sphere is penetrating/outside the wall
+                const float seperation = centerDistance - collider.radius;
+
+                // If we are already touching or slightly penetrating the wall
+                // AND moving toward/out through it, handle the collision immediately 
+                constexpr float CONTACT_EPS = 1e-4f;
+                if (seperation <= CONTACT_EPS)
+                {
+                    if (0.0f < bestTime)
+                    {
+                        bestTime = 0.0f;
+                        bestNormal = plane.normal;
+                        bestKind = CollisionKind::Plane;
+                    }
+                    continue;
+                }
+
+                // otherwise calculate when the sphere will reach the wall
                 const float hitTime = (collider.radius - centerDistance) / approachRate;
 
-                if (hitTime > EPS_T && hitTime <= remainingTime && hitTime < bestTime)
+
+                if (hitTime > 0.0f && hitTime <= remainingTime && hitTime < bestTime)
                 {
                     bestTime = hitTime;
                     bestNormal = plane.normal;
@@ -627,6 +649,7 @@ void CollisionSystem::update(Registry& registry, float dt)
                 // the other entity that it hit is a target, then destroy both
                 if (bestKind == CollisionKind::Sphere && registry.projectiles().has(entity) && registry.targets().has(bestOtherEntity))
                 {
+                    std::cout << "[HIT HIT HIT] PROJECTILE ENTITY " << entity << " HIT TARGET ENTITY " << bestOtherEntity << std::endl;
                     queueDestroy(entity);
                     queueDestroy(bestOtherEntity);
 
@@ -700,7 +723,48 @@ void CollisionSystem::update(Registry& registry, float dt)
 
         profileCounter = 0;
     }
-    
+
+    for (Entity entity : registry.targets().entities())
+    {
+        if (!transforms.has(entity) ||
+            !velocities.has(entity) ||
+            !colliders.has(entity))
+        {
+            continue;
+        }
+
+        const Transform& transform = transforms.get(entity);
+        const Velocity& velocity = velocities.get(entity);
+        const SphereCollider& collider = colliders.get(entity);
+
+        const float r = collider.radius;
+
+        const bool outOfBounds =
+            transform.position.x < -50.0f + r ||
+            transform.position.x >  50.0f - r ||
+            transform.position.y < -30.0f + r ||
+            transform.position.y >  30.0f - r ||
+            transform.position.z <   0.0f + r ||
+            transform.position.z > 100.0f - r;
+
+        if (outOfBounds)
+        {
+            std::cout
+                << "\n[OUT OF BOUNDS]\n"
+                << "Entity: " << entity << '\n'
+                << "Position: ("
+                << transform.position.x << ", "
+                << transform.position.y << ", "
+                << transform.position.z << ")\n"
+                << "Velocity: ("
+                << velocity.linear.x << ", "
+                << velocity.linear.y << ", "
+                << velocity.linear.z << ")\n"
+                << "Radius: " << r
+                << "\n\n";
+        }
+    }
+        
     // DEFFERRED ENTITY DESTRUCTION
     // Collision processing is NOW finished, so it is safe to modifiy the component storages
     for (Entity entity : entitiesToDestroy)
