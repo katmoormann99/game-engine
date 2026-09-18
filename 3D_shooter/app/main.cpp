@@ -12,6 +12,7 @@
 #include "engine/components/material.hpp"
 
 #include "engine/systems/render_system.hpp"
+#include "engine/systems/weapon_system.hpp"
 
 int main()
 {
@@ -24,6 +25,7 @@ int main()
     std::cout << "[MAIN] Graphics intialized" << std::endl;
 
     engine::RenderSystem renderSystem;
+    engine::WeaponSystem weaponSystem;
 
     // 60 Hz simulation, 4.5-unit spatial grid cells
     engine::Simulation simulation(1.0 / 60.0, 4.5f);
@@ -66,7 +68,7 @@ int main()
     engine::Entity arenaBackdrop = factory.createStaticSurface(cg::Point3(0.0f, 30.1f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), arenaBackdropMaterial);
     engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 90.0f, 1.0f, 1.0f, 300.0f);
     engine::Entity light = factory.createLight(cg::Point3(0.0f, -95.0f, 55.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);
-    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -80.0f, 50.0f), 80.0f, 0.25f);
+    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -100.0f, 40.0f), 150.0f, 0.25f);
 
     std::cout << "\nSCENE COMPLETE\n";
 
@@ -92,23 +94,16 @@ int main()
         const double frame_dt = elapsed.count();
 
         running = graphics.handleEvents();
+        weaponSystem.aim(registry, weapon, graphics.mouseDeltaX(), graphics.mouseDeltaY());
 
         if (graphics.firePressed())
         {
             std::cout << "\nFIRE EVENT\n";
             std::cout << "[INPUT] SPACE pressed\n";
-            std::cout << "[WEAPON] Weapon Entity " << weapon
-                    << " attempting to fire\n";
+            std::cout << "[WEAPON] Weapon Entity " << weapon  << " attempting to fire\n";
 
             const engine::Transform& weaponTransform = registry.transforms().get(weapon);
-
-            simulation.fireWeapon(
-                factory,
-                weapon,
-                camera,
-                weaponTransform.position,
-                cg::Vector3(0.0f, 1.0f, 0.0f)
-            );
+            simulation.fireWeapon(factory, weapon, camera, weaponTransform.position, cg::Vector3(0.0f, 1.0f, 0.0f));
         }
 
         // const auto simulationStart = std::chrono::steady_clock::now();
@@ -129,10 +124,8 @@ int main()
 
         graphics.beginFrame();
 
-        renderSystem.render(
-            registry,
-            graphics
-        );
+        renderSystem.render(registry,graphics);
+        graphics.drawCrosshair();
 
         graphics.endFrame();
 

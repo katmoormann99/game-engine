@@ -34,6 +34,8 @@ public:
         const cg::Point3& position, 
         const cg::Vector3& direction
     );
+
+    void aim(Registry& registry, Entity weapon, float mouseDeltaX, float mouseDeltaY);
 };
 
 } // namespace engine

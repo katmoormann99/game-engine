@@ -37,6 +37,7 @@ add_executable(
     src/rendering/mesh.cpp
     src/rendering/shader.cpp
     src/rendering/particle_emitter.cpp
+    src/rendering/cross_hair.cpp
 
     src/factory/entity_factory.cpp
 
@@ -76,6 +77,8 @@ set(SHADER_FILES
     arena_box.frag
     particles.vert
     particles.frag
+    cross_hair.vert
+    cross_hair.frag
 )
 
 add_custom_target(copy_shaders ALL
@@ -92,6 +95,9 @@ add_custom_target(copy_shaders ALL
 
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/particles.vert ${SHADER_BINARY_DIR}/particles.vert
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/particles.frag ${SHADER_BINARY_DIR}/particles.frag
+
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/cross_hair.vert ${SHADER_BINARY_DIR}/cross_hair.vert
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/cross_hair.frag ${SHADER_BINARY_DIR}/cross_hair.frag
     DEPENDS
         ${SHADER_SOURCE_DIR}/basic.vert
         ${SHADER_SOURCE_DIR}/basic.frag
@@ -101,6 +107,8 @@ add_custom_target(copy_shaders ALL
         ${SHADER_SOURCE_DIR}/arena_box.frag
         ${SHADER_SOURCE_DIR}/particles.vert
         ${SHADER_SOURCE_DIR}/particles.frag
+        ${SHADER_SOURCE_DIR}/cross_hair.vert
+        ${SHADER_SOURCE_DIR}/cross_hair.frag
 
     COMMENT "Updating shaders"
 )

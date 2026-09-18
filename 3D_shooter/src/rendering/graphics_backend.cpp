@@ -51,6 +51,7 @@ namespace engine
             std::cerr << "Error creating SDL window properties: " << SDL_GetError() << '\n';
             return false;
         }
+        
 
         SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING, "Kat Moormann ECS Game Engine");
         SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN, true);
@@ -134,6 +135,11 @@ namespace engine
         if (!arenaBox_.initialize())
         {
             std::cerr << "Failed to initialize arena box.\n";
+            return false;
+        }
+        if (!crosshair_.initialize())
+        {
+            std::cerr << "Failed to initialize cross_hair.\n";
             return false;
         }
 
@@ -232,6 +238,8 @@ namespace engine
     bool GraphicsBackend::handleEvents()
     {
         SDL_Event event;
+        mouseDeltaX_ = 0.0f;
+        mouseDeltaY_ = 0.0f;
 
         // Reset every frame.
         // This becomes true only during a frame where SPACE is pressed.
@@ -259,21 +267,22 @@ namespace engine
 
                     break;
                 }
-
+                case SDL_EVENT_MOUSE_MOTION:
+                {
+                    mouseX_ = event.motion.x;
+                    mouseY_ = event.motion.y;
+                    break;
+                }
                 case SDL_EVENT_WINDOW_RESIZED:
                 case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                 {
-                    glViewport(
-                        0,
-                        0,
-                        event.window.data1,
-                        event.window.data2
-                    );
-
+                    windowWidth_ = event.window.data1;
+                    windowHeight_ = event.window.data2;
+                    glViewport(0, 0, windowWidth_, windowHeight_);
                     break;
                 }
 
-                default:
+                                default:
                     break;
             }
         }
@@ -281,6 +290,16 @@ namespace engine
         return true;
     }
 
+    float GraphicsBackend::mouseDeltaX() const
+    {
+        return mouseDeltaX_;
+    }
+
+    float GraphicsBackend::mouseDeltaY() const
+    {
+        return mouseDeltaY_;
+    }
+    
     // Clear the framebuffer before rendering a new frame.
     void GraphicsBackend::beginFrame()
     {
@@ -293,6 +312,14 @@ namespace engine
     void GraphicsBackend::drawSkybox()
     {
         skybox_.draw(view_.get(), projection_.get());
+    }
+
+    void GraphicsBackend::drawCrosshair()
+    {
+        const float x = (mouseX_ / static_cast<float>(windowWidth_)) * 2.0f - 1.0f;
+        const float y = 1.0f - (mouseY_ / static_cast<float>(windowHeight_)) * 2.0f;
+
+        crosshair_.draw(x, y);
     }
 
     void GraphicsBackend::drawArenaBox()
@@ -406,6 +433,7 @@ namespace engine
 
         skybox_.shutdown();
         arenaBox_.shutdown();
+        crosshair_.shutdown();
 
         if (g_context != nullptr)
         {

@@ -16,6 +16,7 @@
 #include "engine/rendering/skybox.hpp"
 #include "engine/rendering/arena_box.hpp"
 #include "engine/rendering/mesh.hpp"
+#include "engine/rendering/cross_hair.hpp"
 #include "engine/rendering/shader.hpp"
 #include "geometry/matrix.hpp"
 
@@ -37,10 +38,15 @@ public:
     void drawSkybox();
     void drawArenaBox();
     void drawParticle(const Transform& transform, const Material &material);
+    void drawCrosshair();
+
     void setCamera(const Transform& transform, const Camera& camera);
     void setLight(const Transform& transform, const Light& light);
     void endFrame();
     void shutdown();
+
+    float mouseDeltaX() const;
+    float mouseDeltaY() const;
 
 private:
     bool createUnitSquareMesh();
@@ -55,10 +61,17 @@ private:
     cg::Matrix4x4 view_;
     cg::Matrix4x4 projection_;
 
+    float mouseX_ = 400.0f;
+    float mouseY_ = 400.0f;
+
+    int windowWidth_ = 800;
+    int windowHeight_ = 800;
+
     bool firePressed_ = false;
 
     Skybox skybox_;
     ArenaBox arenaBox_;
+    Crosshair crosshair_;
 };
 
 } // namespace engine

@@ -29,14 +29,20 @@ void WeaponSystem::update(Registry& registry, float dt)
     }
 }
 
-Entity WeaponSystem::fire(
-    Registry& registry,
-    EntityFactory& factory,
-    Entity weaponEntity,
-    Entity owner,
-    const cg::Point3& position,
-    const cg::Vector3& direction
-)
+void WeaponSystem::aim(Registry& registry, Entity weapon, float mouseDeltaX, float mouseDeltaY)
+{
+    Transform& transform = registry.transforms().get(weapon);
+
+    const float sensitivity = 0.10f;
+    const float maxPitch = 80.0f;
+
+    transform.rotation.z -= mouseDeltaX * sensitivity;
+    transform.rotation.x -= mouseDeltaY * sensitivity;
+
+    transform.rotation.x = std::clamp(transform.rotation.x, -maxPitch, maxPitch);
+}
+
+Entity WeaponSystem::fire(Registry& registry, EntityFactory& factory, Entity weaponEntity, Entity owner, const cg::Point3& position, const cg::Vector3& direction)
 {
     auto& weapons = registry.weapons();
 
