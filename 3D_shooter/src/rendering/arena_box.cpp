@@ -9,11 +9,6 @@
 #include "engine/rendering/arena_box.hpp"
 #include "engine/rendering/graphics.hpp"
 
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <string>
-
 namespace engine
 {
 
@@ -51,50 +46,6 @@ const std::uint32_t ARENA_INDICES[] =
     3, 7
 };
 
-std::string loadTextFile(const std::string& path)
-{
-    std::ifstream file(path);
-
-    if (!file.is_open())
-    {
-        std::cerr << "Failed to open arena shader: " << path << '\n';
-        return {};
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-
-    return buffer.str();
-}
-
-GLuint compileShader(GLenum type, const std::string& source)
-{
-    GLuint shader = glCreateShader(type);
-
-    const char* sourcePtr = source.c_str();
-
-    glShaderSource(shader, 1, &sourcePtr, nullptr);
-    glCompileShader(shader);
-
-    GLint success = 0;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-    if (!success)
-    {
-        char log[1024];
-
-        glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-
-        std::cerr << "Arena shader compilation failed:\n" << log << '\n';
-
-        glDeleteShader(shader);
-
-        return 0;
-    }
-
-    return shader;
-}
-
 } // anonymous namespace
 
 bool ArenaBox::initialize()
@@ -116,47 +67,9 @@ bool ArenaBox::initialize()
 
     glBindVertexArray(0);
 
-    const std::string vertexSource = loadTextFile("shaders/arena_box.vert");
-    const std::string fragmentSource = loadTextFile("shaders/arena_box.frag");
-
-    if (vertexSource.empty() || fragmentSource.empty()) { return false; }
-
-    GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource);
-
-    if (vertexShader == 0) { return false; }
-
-    GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
-
-    if (fragmentShader == 0)
+    if (!shader_.initialize("shaders/arena_box.vert", "shaders/arena_box.frag"))
     {
-        glDeleteShader(vertexShader);
-        return false;
-    }
-
-    shaderProgram_ = glCreateProgram();
-
-    glAttachShader(shaderProgram_, vertexShader);
-    glAttachShader(shaderProgram_, fragmentShader);
-
-    glLinkProgram(shaderProgram_);
-
-    GLint success = 0;
-    glGetProgramiv(shaderProgram_, GL_LINK_STATUS, &success);
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    if (!success)
-    {
-        char log[1024];
-
-        glGetProgramInfoLog(shaderProgram_, sizeof(log), nullptr, log);
-
-        std::cerr << "Arena shader linking failed:\n" << log << '\n';
-
-        glDeleteProgram(shaderProgram_);
-        shaderProgram_ = 0;
-
+        shutdown();
         return false;
     }
 
@@ -165,20 +78,13 @@ bool ArenaBox::initialize()
 
 void ArenaBox::draw(const float* view, const float* projection)
 {
-    glUseProgram(shaderProgram_);
-
-    GLint viewLocation = glGetUniformLocation(shaderProgram_, "uView");
-    GLint projectionLocation = glGetUniformLocation(shaderProgram_, "uProjection");
-
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, view);
-    glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projection);
+    shader_.use();
+    shader_.setMatrix4("uView", view);
+    shader_.setMatrix4("uProjection", projection);
 
     glBindVertexArray(vao_);
-
     glLineWidth(2.0f);
-
     glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, nullptr);
-
     glBindVertexArray(0);
 }
 
@@ -202,11 +108,7 @@ void ArenaBox::shutdown()
         vao_ = 0;
     }
 
-    if (shaderProgram_ != 0)
-    {
-        glDeleteProgram(shaderProgram_);
-        shaderProgram_ = 0;
-    }
+    shader_.shutdown();
 }
 
 } // namespace engine

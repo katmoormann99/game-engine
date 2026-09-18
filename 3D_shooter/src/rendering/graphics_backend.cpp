@@ -8,20 +8,16 @@
 
 #include "engine/rendering/graphics_backend.hpp"
 #include "engine/rendering/graphics.hpp"
-#include "geometry/matrix.hpp"
-
 #include "engine/rendering/obj_loader.hpp"
 
+#include "geometry/matrix.hpp"
 #include "geometry/geometry.hpp"
 
-#include <fstream>
-#include <sstream>
-#include <string>
 #include <SDL3/SDL.h>
 
+#include <cmath>
 #include <cstddef>
 #include <exception>
-
 #include <iostream>
 
 namespace engine
@@ -29,50 +25,8 @@ namespace engine
 
     namespace
     {
-
-    SDL_Window* g_window = nullptr;
-    SDL_GLContext g_context = nullptr;
-
-    std::string loadTextFile(const std::string& path)
-    {
-        std::ifstream file(path);
-
-        if (!file.is_open())
-        {
-            std::cerr << "Failed to open file: " << path << '\n';
-            return {};
-        }
-
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-
-        return buffer.str();
-    }
-
-
-    GLuint compileShader(GLenum type, const std::string& source)
-    {
-        GLuint shader = glCreateShader(type);
-
-        const char* sourcePtr = source.c_str();
-
-        glShaderSource(shader, 1, &sourcePtr, nullptr);
-        glCompileShader(shader);
-        GLint success = 0;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-
-        if (!success)
-        {
-            char log[1024];
-            glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
-            std::cerr << "Shader compilation failed:\n" << log << '\n';
-            glDeleteShader(shader);
-            return 0;
-        }
-
-        return shader;
-    }
-
+        SDL_Window* g_window = nullptr;
+        SDL_GLContext g_context = nullptr;
     } // anonymous namespace
 
     // Initialize SDL, OpenGL, meshes, shaders, skybox, and arena box.
@@ -136,7 +90,7 @@ namespace engine
         glViewport(0, 0, 800, 800);
 
         // Create scene rendering resources.
-        if (!createShaderProgram()) { return false; }
+        if (!shader_.initialize("shaders/basic.vert", "shaders/basic.frag")) { return false; }
         if (!createUnitSquareMesh()) { return false; }
         if (!createTargetMesh()) { return false; }
 
@@ -184,230 +138,37 @@ namespace engine
 
         return true;
     }
-    
-    bool GraphicsBackend::createShaderProgram()
-    {
-        const std::string vertexSource = loadTextFile("shaders/basic.vert");
-        const std::string fragmentSource = loadTextFile("shaders/basic.frag");
-
-        if(vertexSource.empty() || fragmentSource.empty())
-        {
-            return false;
-        }
-
-        GLuint vertexShader = compileShader(GL_VERTEX_SHADER, vertexSource);
-
-        if (vertexShader == 0)
-        {
-            return false; 
-        }
-
-        GLuint fragmentShader = compileShader(GL_FRAGMENT_SHADER, fragmentSource);
-
-        if (fragmentShader == 0)
-        {
-            glDeleteShader(vertexShader);
-            return false;
-        }
-
-        shaderProgram_ = glCreateProgram();
-
-        glAttachShader(shaderProgram_, vertexShader);
-        glAttachShader(shaderProgram_, fragmentShader);
-
-        glLinkProgram(shaderProgram_);
-
-        GLint success = 0;
-
-        glGetProgramiv(shaderProgram_, GL_LINK_STATUS, &success);
-
-        glDeleteShader(vertexShader);
-        glDeleteShader(fragmentShader);
-
-        if (!success)
-        {
-            char log[1024];
-            glGetProgramInfoLog(shaderProgram_, sizeof(log), nullptr, log);
-
-            std::cerr << "Shader linking failed: \n" << log << std::endl;
-
-            glDeleteProgram(shaderProgram_);
-            shaderProgram_ = 0;
-
-            return false;
-        }
-        return true;
-    }
-
     bool GraphicsBackend::createUnitSquareMesh()
     {
-        // position xyz, normal xyz
-        const float vertices[] =
+        MeshData meshData;
+
+        meshData.vertices =
         {
-            -0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, 0.0f,    0.0f, 0.0f, 1.0f,
-            0.5f,  0.5f, 0.0f,    0.0f, 0.0f, 1.0f,
-            -0.5f,  0.5f, 0.0f,    0.0f, 0.0f, 1.0f
+            {{-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+            {{ 0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+            {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+            {{-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}
         };
 
-        const std::uint32_t indices[] = 
+        meshData.indices =
         {
             0, 1, 2,
             0, 2, 3
         };
 
-        glGenVertexArrays(1, &unitSquareMesh_.vao);
-
-        glGenBuffers(1, &unitSquareMesh_.vbo);
-        glGenBuffers(1, &unitSquareMesh_.ebo);
-
-        glBindVertexArray(unitSquareMesh_.vao);
-
-        // Vertex data
-        glBindBuffer(GL_ARRAY_BUFFER, unitSquareMesh_.vbo);
-
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-        // Index data
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, unitSquareMesh_.ebo);
-
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-        // Position
-        glEnableVertexAttribArray(0);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), nullptr);
-
-        // Normal
-        glEnableVertexAttribArray(1);
-
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
-
-        unitSquareMesh_.indexCount = 6;
-
-        glBindVertexArray(0);
-
-        return true;
+        return unitSquareMesh_.initialize(meshData);
     }
 
     bool GraphicsBackend::createTargetMesh()
     {
-        MeshData meshData;
-
-        try
-        {
-            meshData = loadOBJ(
-                "../assets/models/space_shuttle.obj"
-            );
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr
-                << "Failed to load target mesh: "
-                << e.what()
-                << '\n';
-
+        try {
+            MeshData meshData = loadOBJ("../assets/models/space_shuttle.obj");
+            std::cout << "Loaded target mesh: " << meshData.vertices.size() << " vertices, " << meshData.indices.size() / 3 << " triangles\n";
+            return targetMesh_.initialize(meshData);
+        } catch (const std::exception& e){
+            std::cerr << "Failed to load target mesh: " << e.what() << '\n';
             return false;
         }
-
-        glGenVertexArrays(
-            1,
-            &targetMesh_.vao
-        );
-
-        glGenBuffers(
-            1,
-            &targetMesh_.vbo
-        );
-
-        glGenBuffers(
-            1,
-            &targetMesh_.ebo
-        );
-
-        glBindVertexArray(
-            targetMesh_.vao
-        );
-
-        // ---------------------------------------------------------
-        // Upload vertex data.
-        // MeshVertex contains:
-        //
-        //     Point3 position
-        //     Vector3 normal
-        // ---------------------------------------------------------
-
-        glBindBuffer(
-            GL_ARRAY_BUFFER,
-            targetMesh_.vbo
-        );
-
-        glBufferData(
-            GL_ARRAY_BUFFER,
-            meshData.vertices.size() * sizeof(MeshVertex),
-            meshData.vertices.data(),
-            GL_STATIC_DRAW
-        );
-
-        // Upload index data.
-
-        glBindBuffer(
-            GL_ELEMENT_ARRAY_BUFFER,
-            targetMesh_.ebo
-        );
-
-        glBufferData(
-            GL_ELEMENT_ARRAY_BUFFER,
-            meshData.indices.size() * sizeof(std::uint32_t),
-            meshData.indices.data(),
-            GL_STATIC_DRAW
-        );
-
-        // Attribute 0: vertex position
-
-        glEnableVertexAttribArray(0);
-
-        glVertexAttribPointer(
-            0,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            sizeof(MeshVertex),
-            reinterpret_cast<void*>(
-                offsetof(MeshVertex, position)
-            )
-        );
-
-        // Attribute 1: vertex normal
-
-        glEnableVertexAttribArray(1);
-
-        glVertexAttribPointer(
-            1,
-            3,
-            GL_FLOAT,
-            GL_FALSE,
-            sizeof(MeshVertex),
-            reinterpret_cast<void*>(
-                offsetof(MeshVertex, normal)
-            )
-        );
-
-        targetMesh_.indexCount =
-            static_cast<std::uint32_t>(
-                meshData.indices.size()
-            );
-
-        glBindVertexArray(0);
-
-        std::cout
-            << "Loaded target mesh: "
-            << meshData.vertices.size()
-            << " vertices, "
-            << meshData.indices.size() / 3
-            << " triangles\n";
-
-        return true;
     }
 
     void GraphicsBackend::setCamera(const Transform& transform, const Camera& camera)
@@ -446,26 +207,18 @@ namespace engine
 
     void GraphicsBackend::setLight(const Transform& transform, const Light& light)
     {
-        glUseProgram(shaderProgram_);
+        shader_.use();
 
-        GLint lightPositionLocation = glGetUniformLocation(shaderProgram_, "uLightPosition");
-        GLint lightColorLocation = glGetUniformLocation(shaderProgram_, "uLightColor");
-        GLint lightIntensityLocation = glGetUniformLocation(shaderProgram_, "uLightIntensity");
-        GLint directionLocation = glGetUniformLocation(shaderProgram_, "uLightDirection");
-        GLint innerCutoffLocation = glGetUniformLocation(shaderProgram_, "uInnerCutoff");
-        GLint outerCutoffLocation = glGetUniformLocation(shaderProgram_, "uOuterCutoff");
-
-        glUniform3f(lightPositionLocation, transform.position.x, transform.position.y, transform.position.z);
-        glUniform3f(lightColorLocation, light.color.x, light.color.y, light.color.z);
-        glUniform1f(lightIntensityLocation, light.intensity);
-
-        glUniform3f(directionLocation, light.direction.x, light.direction.y, light.direction.z);
+        shader_.setVec3("uLightPosition", transform.position.x, transform.position.y, transform.position.z);
+        shader_.setVec3("uLightColor", light.color.x, light.color.y, light.color.z);
+        shader_.setFloat("uLightIntensity", light.intensity);
+        shader_.setVec3("uLightDirection", light.direction.x, light.direction.y, light.direction.z);
 
         const float innerRadians = cg::degrees_to_radians(light.innerCutoffDegrees);
-        const float outerRadians =cg::degrees_to_radians(light.outerCutoffDegrees);
+        const float outerRadians = cg::degrees_to_radians(light.outerCutoffDegrees);
 
-        glUniform1f(innerCutoffLocation, std::cos(innerRadians));
-        glUniform1f(outerCutoffLocation, std::cos(outerRadians));
+        shader_.setFloat("uInnerCutoff", std::cos(innerRadians));
+        shader_.setFloat("uOuterCutoff", std::cos(outerRadians));
     }
 
     bool GraphicsBackend::firePressed() const
@@ -582,7 +335,7 @@ namespace engine
                 return;
         }
 
-        glUseProgram(shaderProgram_);
+        shader_.use();
 
         // Build model matrix from ECS Transform.
         cg::Matrix4x4 model;
@@ -594,35 +347,20 @@ namespace engine
         model.scale(transform.scale.x, transform.scale.y, transform.scale.z);
 
         // Vertex position --> Model Matrix --> Where is the surface?
-        GLint modelLocation = glGetUniformLocation(shaderProgram_, "uModel");
-        glUniformMatrix4fv(modelLocation, 1, GL_FALSE, model.get());
-
-        GLint viewLocation = glGetUniformLocation(shaderProgram_, "uView");
-        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, view_.get());
-
-        GLint projectionLocation = glGetUniformLocation(shaderProgram_, "uProjection");
-        glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, projection_.get());
-        
-        GLuint materialColorLocation = glGetUniformLocation(shaderProgram_, "uMaterialColor");
-        glUniform3f(materialColorLocation, material.r, material.g, material.b);
+        shader_.setMatrix4("uModel", model.get());
+        shader_.setMatrix4("uView", view_.get());
+        shader_.setMatrix4("uProjection", projection_.get());
+        shader_.setVec3("uMaterialColor", material.r, material.g, material.b);
 
         // Model matrix transforms the object. Normal matrix transforms the object's surface
         // directions while keeping them perpindicular to the surface
         // Vertex normal --> Normal Matrix --> Which way is the surface facing?
         // Lambert Lighting: dot(L,N)
         cg::Matrix4x4 normalMatrix = model.get_inverse().get_transpose();
-        GLint normalMatrixLocation = glGetUniformLocation(shaderProgram_, "uNormalMatrix");
-        glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, normalMatrix.get());
-
-        GLint alphaLocation = glGetUniformLocation(shaderProgram_, "uMaterialAlpha");
-        glUniform1f(alphaLocation, material.a);
+        shader_.setMatrix4("uNormalMatrix", normalMatrix.get());
+        shader_.setFloat("uMaterialAlpha", material.a);
         
-        glBindVertexArray(mesh->vao);
-        glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, nullptr);
-        glBindVertexArray(0);
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        mesh->draw();
     }
 
     // Present the completed frame.
@@ -640,14 +378,10 @@ namespace engine
     // Release SDL/OpenGL resources.
     void GraphicsBackend::shutdown()
     {
-        // Clean up ordinary GPU resources...
-        // unit square
-        // target mesh
-        // shader program
+        unitSquareMesh_.shutdown();
+        targetMesh_.shutdown();
+        shader_.shutdown();
 
-        // IMPORTANT:
-        // Skybox also owns OpenGL resources.
-        // Destroy these while the GL context still exists.
         skybox_.shutdown();
         arenaBox_.shutdown();
 
@@ -665,4 +399,5 @@ namespace engine
 
         SDL_Quit();
     }
+
 } // namespace engine

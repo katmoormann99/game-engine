@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "engine/rendering/shader.hpp"
+
 #include <cstdint>
 
 namespace engine
@@ -17,16 +19,14 @@ class ArenaBox
 {
 public:
     bool initialize();
-
     void draw(const float* view, const float* projection);
-
     void shutdown();
 
 private:
     std::uint32_t vao_ = 0;
     std::uint32_t vbo_ = 0;
     std::uint32_t ebo_ = 0;
-    std::uint32_t shaderProgram_ = 0;
+    Shader shader_;
 };
 
 } // namespace engine

@@ -7,27 +7,11 @@
 //============================================================================
 
 #pragma once
-#include "geometry/point3.hpp"
-#include "geometry/vector3.hpp"
 
-#include <cstdint>
+#include "engine/rendering/mesh.hpp"
 #include <string>
-#include <vector>
 
 namespace engine
 {
-    struct MeshVertex
-    {
-        cg::Point3 position;
-        cg::Vector3 normal;
-    };
-
-    struct MeshData
-    {
-        std::vector<MeshVertex> vertices;
-        std::vector<std::uint32_t> indices;
-    };
-
-    MeshData loadOBJ(const std::string &path);
-}
-
+    MeshData loadOBJ(const std::string& path);
+} // namespace engine

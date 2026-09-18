@@ -33,6 +33,8 @@ add_executable(
     src/rendering/skybox.cpp
     src/rendering/stb_image.cpp
     src/rendering/arena_box.cpp
+    src/rendering/mesh.cpp
+    src/rendering/shader.cpp
 
     src/factory/entity_factory.cpp
 
