@@ -36,6 +36,7 @@ public:
     void drawMesh(MeshId meshId, const Transform& transform, const Material& material);
     void drawSkybox();
     void drawArenaBox();
+    void drawParticle(const Transform& transform, const Material &material);
     void setCamera(const Transform& transform, const Camera& camera);
     void setLight(const Transform& transform, const Light& light);
     void endFrame();
@@ -48,6 +49,8 @@ private:
     GPUMesh unitSquareMesh_;
     GPUMesh targetMesh_;
     Shader shader_;
+
+    Shader particleShader_;
 
     cg::Matrix4x4 view_;
     cg::Matrix4x4 projection_;

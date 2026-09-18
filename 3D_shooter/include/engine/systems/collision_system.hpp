@@ -3,6 +3,8 @@
 #include "engine/core/registry.hpp"
 #include "engine/spatial/spatial_grid.hpp"
 
+#include "engine/events/impact_event.hpp"
+
 #include <condition_variable>
 #include <mutex>
 #include <thread>
@@ -23,8 +25,12 @@ public:
 
     // Detects and handles collisions for one simulation timestep
     void update(Registry& registry, float dt);
+     
+    std::vector<ImpactEvent> consumeImpactEvents();
 
 private:
+    std::vector<ImpactEvent> impactEvents_;
+
     // Identifies which collision phase the workers should perform
     enum class WorkType
     {

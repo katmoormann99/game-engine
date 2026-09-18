@@ -65,6 +65,8 @@
             Entity createWeapon(const cg::Point3& position, float projectileSpeed, float cooldownSeconds);
 
             Entity createProjectile(Entity owner, const cg::Point3& position, const cg::Vector3& velocity, float damage, double lifetime);
+            
+            Entity createParticle(const cg::Point3& position, const cg::Vector3& velocity, float duration, float initialSize, float finalSize, const Material& material);
 
         private:
             Registry &registry_;

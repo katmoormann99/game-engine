@@ -54,30 +54,22 @@ namespace engine
         }
     }
 
-    Entity Simulation::fireWeapon(
-        EntityFactory& factory,
-        Entity weaponEntity,
-        Entity owner,
-        const cg::Point3& position,
-        const cg::Vector3& direction
-    )
+    std::vector<ImpactEvent> Simulation::consumeImpactEvents()
     {
-        return weaponSystem_.fire(
-            registry_,
-            factory,
-            weaponEntity,
-            owner,
-            position,
-            direction
-        );
+        return collisionSystem_.consumeImpactEvents();
     }
 
+    Entity Simulation::fireWeapon(EntityFactory& factory, Entity weaponEntity, Entity owner, const cg::Point3& position, const cg::Vector3& direction)
+    {
+        return weaponSystem_.fire(registry_, factory, weaponEntity, owner, position, direction);
+    }
 
     void Simulation::step()
     {
         const float fixedDt_ = static_cast<float>(time_.fixed_dt);
 
         weaponSystem_.update(registry_, fixedDt_);
+        particleSystem_.update(registry_, fixedDt_);
 
         const auto movementStart = std::chrono::steady_clock::now();
         movementSystem_.update(registry_, static_cast<float>(fixedDt_));

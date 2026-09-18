@@ -1,6 +1,6 @@
 #include "engine/simulation/simulation.hpp"
 #include "engine/rendering/graphics_backend.hpp"
-
+#include "engine/rendering/particle_emitter.hpp"
 #include "include/engine/factory/entity_factory.hpp"
 
 #include "engine/components/transform.hpp"
@@ -8,6 +8,8 @@
 #include "engine/components/lifetime.hpp"
 #include "engine/components/sensor.hpp"
 #include "engine/components/renderable.hpp"
+#include "engine/components/particle.hpp"
+#include "engine/components/material.hpp"
 
 #include "engine/systems/render_system.hpp"
 
@@ -33,6 +35,7 @@ int main()
     // The factory pattern here is very important - it centralizes the construction of common ECS entity types,
     // ensuring each entity receives the correct set of components without duplicating setup logic throughout the application
     engine::EntityFactory factory(registry);
+    engine::ParticleEmitter particleEmitter;
 
     std::cout << "\nBUILDING SCENE" << std::endl;
 
@@ -64,6 +67,7 @@ int main()
     engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 90.0f, 1.0f, 1.0f, 300.0f);
     engine::Entity light = factory.createLight(cg::Point3(0.0f, -95.0f, 55.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);
     engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -80.0f, 50.0f), 80.0f, 0.25f);
+
     std::cout << "\nSCENE COMPLETE\n";
 
     std::cout << "Sensor:   Entity " << sensorEntity << '\n';
@@ -111,7 +115,11 @@ int main()
         simulation.update(frame_dt);
         // const auto simulationEnd = std::chrono::steady_clock::now();
 
-        // const std::chrono::duration<double, std::milli> simulationElapsed = simulationEnd - simulationStart;
+        for (const engine::ImpactEvent& impact : simulation.consumeImpactEvents())
+        {
+            particleEmitter.emitExplosion(factory, impact.position, 75);
+        }
+                // const std::chrono::duration<double, std::milli> simulationElapsed = simulationEnd - simulationStart;
         // std::cout << "[PROFILE] Simulation update: " << simulationElapsed.count() << "ms" << std::endl;
         if (firstFrame)
         {

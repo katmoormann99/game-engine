@@ -91,6 +91,7 @@ namespace engine
 
         // Create scene rendering resources.
         if (!shader_.initialize("shaders/basic.vert", "shaders/basic.frag")) { return false; }
+        if (!particleShader_.initialize("shaders/particles.vert", "shaders/particles.frag")) { return false; }
         if (!createUnitSquareMesh()) { return false; }
         if (!createTargetMesh()) { return false; }
 
@@ -363,14 +364,34 @@ namespace engine
         mesh->draw();
     }
 
+    void GraphicsBackend::drawParticle(const Transform& transform, const Material& material)
+    {
+        particleShader_.use();
+
+        // The particle shader constructs the billboard around this
+        // world-space center.
+        particleShader_.setVec3("uParticlePosition", transform.position.x, transform.position.y, transform.position.z);
+
+        // Particles are uniformly scaled, so one value is enough.
+        particleShader_.setFloat("uParticleSize", transform.scale.x);
+        particleShader_.setVec3("uParticleColor", material.r, material.g, material.b);
+
+        particleShader_.setFloat("uParticleAlpha", material.a);
+        particleShader_.setMatrix4("uView", view_.get());
+
+        particleShader_.setMatrix4("uProjection", projection_.get());
+
+        // Keep depth testing so particles can disappear behind objects,
+        // but don't let transparent particles write into the depth buffer.
+        glDepthMask(GL_FALSE);
+        unitSquareMesh_.draw();
+        glDepthMask(GL_TRUE);
+    }
+
     // Present the completed frame.
     void GraphicsBackend::endFrame()
     {
-        skybox_.draw(
-            view_.get(),
-            projection_.get()
-        );
-
+        skybox_.draw(view_.get(), projection_.get());
         SDL_GL_SwapWindow(g_window);
     }
 
@@ -381,6 +402,7 @@ namespace engine
         unitSquareMesh_.shutdown();
         targetMesh_.shutdown();
         shader_.shutdown();
+        particleShader_.shutdown();
 
         skybox_.shutdown();
         arenaBox_.shutdown();

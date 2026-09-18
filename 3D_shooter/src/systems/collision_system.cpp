@@ -7,15 +7,15 @@
 //============================================================================
 
 #include "engine/systems/collision_system.hpp"
-
+#include "engine/events/impact_event.hpp"
 #include "engine/components/sphere_collider.hpp"
 #include "engine/components/transform.hpp"
 #include "engine/components/velocity.hpp"
 #include "engine/components/projectile.hpp"
 
-
 #include "geometry/vector3.hpp"
 
+#include <utility>
 #include <array>
 #include <cmath>
 #include <unordered_map>
@@ -61,7 +61,6 @@ struct PendingSphereCollision
     // The other entity involved in this sphere-sphere collision
     Entity otherEntity = 0;
 };
-
 
 // Keep only the EARLIEST sphere collision for an entity.
 void scheduleSphereCollision(
@@ -159,6 +158,14 @@ bool sphereSphereTimeOfImpact(
 }
 
 } // anonymous namespace
+
+std::vector<ImpactEvent> CollisionSystem::consumeImpactEvents()
+{
+    std::vector<ImpactEvent> events = std::move(impactEvents_);
+    impactEvents_.clear();
+    return events;
+}
+
 
 CollisionSystem::CollisionSystem(float cellSize, unsigned int workerCount)
     : spatialGrid_(cellSize), workerCount_(workerCount)
@@ -650,15 +657,15 @@ void CollisionSystem::update(Registry& registry, float dt)
                 if (bestKind == CollisionKind::Sphere && registry.projectiles().has(entity) && registry.targets().has(bestOtherEntity))
                 {
                     std::cout << "[HIT HIT HIT] PROJECTILE ENTITY " << entity << " HIT TARGET ENTITY " << bestOtherEntity << std::endl;
+
+                    impactEvents_.push_back(ImpactEvent{entity, bestOtherEntity, transform.position});
+
                     queueDestroy(entity);
                     queueDestroy(bestOtherEntity);
 
-                    // stop processing the movement of this particle 
                     remainingTime = 0.0f;
-
-                    // This collision has been handled 
                     pendingSphereCollisions.erase(entity);
-                    
+
                     break;
                 }
 

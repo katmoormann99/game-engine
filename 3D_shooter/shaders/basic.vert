@@ -13,19 +13,9 @@ out vec3 worldNormal;
 
 void main()
 {
-    vec4 worldPos =
-        uModel * vec4(position, 1.0);
+    vec4 worldPos = uModel * vec4(position, 1.0);
+    worldPosition = worldPos.xyz;
+    worldNormal = normalize(mat3(uNormalMatrix) * normal);
 
-    worldPosition =
-        worldPos.xyz;
-
-    worldNormal =
-        normalize(
-            mat3(uNormalMatrix) * normal
-        );
-
-    gl_Position =
-        uProjection *
-        uView *
-        worldPos;
+    gl_Position = uProjection * uView * worldPos;
 }

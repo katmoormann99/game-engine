@@ -1,7 +1,7 @@
 //============================================================================
 // Author: Kat Moormann
 // File: render_system.cpp
-// Purpose: Renders ECS entities and scene graphics.
+// Purpose: Renders ECS entities, particle effects, and scene graphics.
 // Date: June 24 2025
 //============================================================================
 
@@ -53,7 +53,7 @@ void RenderSystem::render(const Registry& registry, GraphicsBackend& graphics) c
         break;
     }
 
-    // Draw ECS entities.
+    // Draw standard ECS entities.
     const auto& renderables = registry.renderables();
     const auto& materials = registry.materials();
 
@@ -68,6 +68,21 @@ void RenderSystem::render(const Registry& registry, GraphicsBackend& graphics) c
         if (firstRender_) { std::cout << "[RENDER] Drawing Entity " << entity << " | MeshId " << static_cast<int>(renderable.meshId) << '\n'; }
 
         graphics.drawMesh(renderable.meshId, transform, material);
+    }
+
+    // Draw particle entities using the dedicated particle rendering path.
+    const auto& particles = registry.particles();
+
+    for (Entity entity : particles.entities())
+    {
+        if (!transforms.has(entity) || !materials.has(entity)) { continue; }
+
+        const Transform& transform = transforms.get(entity);
+        const Material& material = materials.get(entity);
+
+        if (firstRender_) { std::cout << "[RENDER] Drawing Particle Entity " << entity << '\n'; }
+
+        graphics.drawParticle(transform, material);
     }
 
     if (firstRender_)

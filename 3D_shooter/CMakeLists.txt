@@ -23,6 +23,7 @@ add_executable(
     src/systems/render_system.cpp
     src/systems/collision_system.cpp
     src/systems/weapon_system.cpp
+    src/systems/particle_system.cpp
 
     src/spatial/spatial_grid.cpp
 
@@ -35,6 +36,7 @@ add_executable(
     src/rendering/arena_box.cpp
     src/rendering/mesh.cpp
     src/rendering/shader.cpp
+    src/rendering/particle_emitter.cpp
 
     src/factory/entity_factory.cpp
 
@@ -72,6 +74,8 @@ set(SHADER_FILES
     skybox.frag
     arena_box.vert
     arena_box.frag
+    particles.vert
+    particles.frag
 )
 
 add_custom_target(copy_shaders ALL
@@ -86,6 +90,8 @@ add_custom_target(copy_shaders ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/arena_box.vert ${SHADER_BINARY_DIR}/arena_box.vert
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/arena_box.frag ${SHADER_BINARY_DIR}/arena_box.frag
 
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/particles.vert ${SHADER_BINARY_DIR}/particles.vert
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SHADER_SOURCE_DIR}/particles.frag ${SHADER_BINARY_DIR}/particles.frag
     DEPENDS
         ${SHADER_SOURCE_DIR}/basic.vert
         ${SHADER_SOURCE_DIR}/basic.frag
@@ -93,6 +99,8 @@ add_custom_target(copy_shaders ALL
         ${SHADER_SOURCE_DIR}/skybox.frag
         ${SHADER_SOURCE_DIR}/arena_box.vert
         ${SHADER_SOURCE_DIR}/arena_box.frag
+        ${SHADER_SOURCE_DIR}/particles.vert
+        ${SHADER_SOURCE_DIR}/particles.frag
 
     COMMENT "Updating shaders"
 )

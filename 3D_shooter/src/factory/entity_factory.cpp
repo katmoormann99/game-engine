@@ -51,6 +51,36 @@ namespace engine
         registry_.targets().add(entity, Target{target_name});
         return entity;
     }
+    
+    Entity EntityFactory::createParticle(const cg::Point3& position, const cg::Vector3& velocity, float duration, float initialSize, float finalSize, const Material& material)
+    {
+        Entity entity = registry_.create();
+
+        Transform transform;
+        transform.position = position;
+        transform.scale = cg::Vector3(initialSize, initialSize, initialSize);
+
+        registry_.transforms().add(entity, transform);
+
+        Velocity particleVelocity;
+        particleVelocity.linear = velocity;
+
+        registry_.velocities().add(entity, particleVelocity);
+
+        Particle particle;
+        particle.age = 0.0f;
+        particle.duration = duration;
+        particle.initialSize = initialSize;
+        particle.finalSize = finalSize;
+        particle.initialAlpha = material.a;
+        particle.finalAlpha = 0.0f;
+
+        registry_.particles().add(entity, particle);
+        registry_.lifetimes().add(entity, Lifetime{duration});
+        registry_.materials().add(entity, material);
+
+        return entity;
+    }
 
     Entity EntityFactory::createStaticSurface(const cg::Point3& position, const cg::Vector3& rotation, const cg::Vector3& scale, const Material& material)
     {
