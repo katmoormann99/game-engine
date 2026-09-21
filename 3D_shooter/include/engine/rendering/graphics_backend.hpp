@@ -20,6 +20,7 @@
 #include "engine/rendering/shader.hpp"
 #include "geometry/matrix.hpp"
 
+#include "geometry/vector3.hpp"
 namespace engine
 {
 
@@ -45,8 +46,7 @@ public:
     void endFrame();
     void shutdown();
 
-    float mouseDeltaX() const;
-    float mouseDeltaY() const;
+    cg::Vector3 aimDirection() const;
 
 private:
     bool createUnitSquareMesh();

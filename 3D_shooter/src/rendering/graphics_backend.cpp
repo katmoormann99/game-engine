@@ -238,8 +238,6 @@ namespace engine
     bool GraphicsBackend::handleEvents()
     {
         SDL_Event event;
-        mouseDeltaX_ = 0.0f;
-        mouseDeltaY_ = 0.0f;
 
         // Reset every frame.
         // This becomes true only during a frame where SPACE is pressed.
@@ -290,16 +288,6 @@ namespace engine
         return true;
     }
 
-    float GraphicsBackend::mouseDeltaX() const
-    {
-        return mouseDeltaX_;
-    }
-
-    float GraphicsBackend::mouseDeltaY() const
-    {
-        return mouseDeltaY_;
-    }
-    
     // Clear the framebuffer before rendering a new frame.
     void GraphicsBackend::beginFrame()
     {
@@ -307,6 +295,22 @@ namespace engine
             GL_COLOR_BUFFER_BIT |
             GL_DEPTH_BUFFER_BIT
         );
+    }
+
+    cg::Vector3 GraphicsBackend::aimDirection() const
+    {
+        const float x = (mouseX_ / static_cast<float>(windowWidth_)) * 2.0f - 1.0f;
+        const float y = 1.0f - (mouseY_ / static_cast<float>(windowHeight_)) * 2.0f;
+
+        cg::Vector3 cameraDirection(x / projection_.m00(), y / projection_.m11(), -1.0f);
+        cameraDirection.normalize();
+
+        const cg::Matrix4x4 inverseView = view_.get_inverse();
+
+        cg::Vector3 worldDirection = inverseView * cameraDirection;
+        worldDirection.normalize();
+
+        return worldDirection;
     }
 
     void GraphicsBackend::drawSkybox()

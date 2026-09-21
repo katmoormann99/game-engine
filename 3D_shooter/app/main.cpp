@@ -68,7 +68,7 @@ int main()
     engine::Entity arenaBackdrop = factory.createStaticSurface(cg::Point3(0.0f, 30.1f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), cg::Vector3(100.0f, 100.0f, 1.0f), arenaBackdropMaterial);
     engine::Entity camera = factory.createCamera(cg::Point3(0.0f, -90.0f, 50.0f), cg::Vector3(90.0f, 0.0f, 0.0f), 90.0f, 1.0f, 1.0f, 300.0f);
     engine::Entity light = factory.createLight(cg::Point3(0.0f, -95.0f, 55.0f), cg::Vector3(1.0f, 1.0f, 1.0f), 1.0f, 12.0f, 22.0f);
-    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -100.0f, 40.0f), 150.0f, 0.25f);
+    engine::Entity weapon = factory.createWeapon(cg::Point3(0.0f, -100.0f, 40.0f), 250.0f, 0.25f);
 
     std::cout << "\nSCENE COMPLETE\n";
 
@@ -94,7 +94,6 @@ int main()
         const double frame_dt = elapsed.count();
 
         running = graphics.handleEvents();
-        weaponSystem.aim(registry, weapon, graphics.mouseDeltaX(), graphics.mouseDeltaY());
 
         if (graphics.firePressed())
         {
@@ -103,7 +102,8 @@ int main()
             std::cout << "[WEAPON] Weapon Entity " << weapon  << " attempting to fire\n";
 
             const engine::Transform& weaponTransform = registry.transforms().get(weapon);
-            simulation.fireWeapon(factory, weapon, camera, weaponTransform.position, cg::Vector3(0.0f, 1.0f, 0.0f));
+
+            simulation.fireWeapon(factory, weapon, camera, weaponTransform.position, graphics.aimDirection());
         }
 
         // const auto simulationStart = std::chrono::steady_clock::now();
